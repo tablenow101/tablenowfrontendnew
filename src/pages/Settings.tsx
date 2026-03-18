@@ -156,7 +156,7 @@ const Settings: React.FC = () => {
                         <p className="text-2xl font-bold mt-1">{user?.vapi_phone_number || 'Not configured'}</p>
                     </div>
 
-                    {!user?.vapi_phone_number && (
+                    {(!user?.vapi_phone_number || !user?.vapi_assistant_id) && (
                         <button
                             onClick={retryVapiSetup}
                             disabled={saving}
