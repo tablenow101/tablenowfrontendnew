@@ -186,12 +186,12 @@ const Settings: React.FC = () => {
             <div className="card">
                 <div className="flex items-center space-x-3 mb-4">
                     <Mail size={24} />
-                    <h2 className="text-xl font-bold">BCC Email Integration</h2>
+                    <h2 className="text-xl font-bold">Third-Party Booking Sync via Email</h2>
                 </div>
 
                 <div className="space-y-4">
                     <p className="text-gray-600">
-                        Forward booking emails from Zenchef or SevenRooms to this address to automatically sync reservations.
+                        Automatically sync your Zenchef or SevenRooms reservations to TableNow by forwarding their booking confirmation emails to this unique address. (This is NOT for replying to guests via Gmail).
                     </p>
 
                     <div className="p-4 bg-gray-50 border-2 border-gray-300 rounded-lg">
