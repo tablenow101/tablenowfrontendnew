@@ -63,69 +63,83 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
   }
 
   return (
-    <div className="prefill-step">
-      <div className="prefill-header">
-        <h1>Your Restaurant Hostess 24/7</h1>
-        <p className="prefill-subtitle">
+    <div className="space-y-6">
+      <div className="text-center">
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-black text-white p-4 rounded-full">
+            <Search size={32} />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold mb-2">Récupérer vos informations</h2>
+        <p className="text-gray-600 text-sm">
           Gagnez du temps — on récupère les informations de votre établissement automatiquement.
         </p>
       </div>
 
-      <div className="prefill-fields">
-
+      <div className="space-y-4">
         {/* Google Maps */}
-        <div className="prefill-field">
-          <label htmlFor="google-url">
+        <div>
+          <label className="block text-sm font-medium mb-2 flex items-center gap-1">
             <MapPin size={16} />
-            Lien Google Maps <span className="optional">(recommandé)</span>
+            Lien Google Maps <span className="text-gray-400 text-xs">(recommandé)</span>
           </label>
           <input
-            id="google-url"
             type="url"
             placeholder="https://maps.google.com/..."
             value={googleUrl}
             onChange={(e) => setGoogleUrl(e.target.value)}
             disabled={loading}
+            className="input"
           />
-          <span className="field-hint">
+          <p className="text-xs text-gray-400 mt-1">
             Ouvrez votre fiche Google Business → cliquez "Partager" → copiez le lien
-          </span>
+          </p>
         </div>
 
         {/* Website */}
-        <div className="prefill-field">
-          <label htmlFor="website-url">
+        <div>
+          <label className="block text-sm font-medium mb-2 flex items-center gap-1">
             <Globe size={16} />
-            Site web <span className="optional">(optionnel)</span>
+            Site web <span className="text-gray-400 text-xs">(optionnel)</span>
           </label>
           <input
-            id="website-url"
             type="url"
             placeholder="https://votre-restaurant.fr"
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             disabled={loading}
+            className="input"
           />
         </div>
 
-        {error && <p className="prefill-error">{error}</p>}
+        {error && (
+          <div className="p-4 bg-red-50 border-2 border-red-500 rounded-lg">
+            <p className="text-red-700 text-sm">{error}</p>
+          </div>
+        )}
 
         <button
-          className="prefill-btn"
           onClick={handlePrefill}
           disabled={loading || (!googleUrl && !websiteUrl)}
+          className="btn btn-primary w-full"
         >
           {loading ? (
-            <><Loader2 size={16} className="spin" /> Récupération en cours...</>
+            <span className="flex items-center justify-center">
+              <Loader2 size={16} className="animate-spin mr-2" />
+              Récupération en cours...
+            </span>
           ) : (
-            <><Search size={16} /> Récupérer mes informations</>
+            <span className="flex items-center justify-center gap-2">
+              <Search size={16} />
+              Récupérer mes informations
+            </span>
           )}
         </button>
 
         <button
-          className="prefill-skip"
           onClick={() => onComplete({ sources: [] })}
           disabled={loading}
+          className="w-full text-center text-sm text-gray-500 hover:text-black underline py-2"
         >
           Remplir manuellement
         </button>
