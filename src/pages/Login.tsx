@@ -31,7 +31,7 @@ const Login: React.FC = () => {
             <div className="max-w-md w-full">
                 <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold mb-2">TableNow</h1>
-                    <p className="text-gray-600">AI-Powered Restaurant Booking</p>
+                    <p className="text-gray-600">Your Restaurant Hostess 24/7</p>
                 </div>
 
                 <div className="bg-white border-4 border-black rounded-2xl p-8 shadow-2xl">
