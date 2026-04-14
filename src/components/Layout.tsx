@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     LayoutDashboard,
@@ -14,13 +14,16 @@ import {
 const Layout: React.FC = () => {
     const { user, logout } = useAuth();
     const location = useLocation();
+    const { restaurantSlug } = useParams();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
+    const base = `/r/${restaurantSlug}`;
+
     const navigation = [
-        { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-        { name: 'Bookings', href: '/bookings', icon: Calendar },
-        { name: 'Call Logs', href: '/calls', icon: Phone },
-        { name: 'Settings', href: '/settings', icon: Settings },
+        { name: 'Dashboard', href: `${base}/dashboard`, icon: LayoutDashboard },
+        { name: 'Bookings', href: `${base}/bookings`, icon: Calendar },
+        { name: 'Call Logs', href: `${base}/calls`, icon: Phone },
+        { name: 'Settings', href: `${base}/settings`, icon: Settings },
     ];
 
     const isActive = (path: string) => {
@@ -34,7 +37,9 @@ const Layout: React.FC = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
                         <div className="flex items-center">
-                            <h1 className="text-2xl font-bold">TableNow</h1>
+                            <Link to={`${base}/dashboard`} className="text-2xl font-bold hover:opacity-80 transition-opacity">
+                                TableNow
+                            </Link>
                             {user && (
                                 <span className="ml-4 text-sm text-gray-300">
                                     {user.name}
