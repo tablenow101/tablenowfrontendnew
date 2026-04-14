@@ -6,41 +6,41 @@
 
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-gray-200 dark:border-gray-700;
   }
-  
+
   body {
-    @apply bg-white text-black font-sans antialiased;
+    @apply bg-white text-black font-sans antialiased dark:bg-gray-950 dark:text-white;
   }
 }
 
 @layer components {
   .btn {
-    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900;
   }
-  
+
   .btn-primary {
-    @apply bg-black text-white hover:bg-gray-800 focus:ring-black;
+    @apply bg-black text-white hover:bg-gray-800 focus:ring-black dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:focus:ring-white;
   }
-  
+
   .btn-secondary {
-    @apply bg-white text-black border-2 border-black hover:bg-gray-50 focus:ring-black;
+    @apply bg-white text-black border-2 border-black hover:bg-gray-50 focus:ring-black dark:bg-gray-900 dark:text-white dark:border-white dark:hover:bg-gray-800;
   }
-  
+
   .btn-ghost {
-    @apply bg-transparent text-black hover:bg-gray-100 focus:ring-gray-300;
+    @apply bg-transparent text-black hover:bg-gray-100 focus:ring-gray-300 dark:text-white dark:hover:bg-gray-800;
   }
-  
+
   .input {
-    @apply w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-black focus:ring-2 focus:ring-black focus:ring-opacity-20 transition-all duration-200;
+    @apply w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-black focus:ring-2 focus:ring-black focus:ring-opacity-20 transition-all duration-200 dark:bg-gray-900 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-white dark:focus:ring-white dark:focus:ring-opacity-20;
   }
-  
+
   .card {
-    @apply bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200;
+    @apply bg-white border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg transition-shadow duration-200 dark:bg-gray-900 dark:border-gray-700;
   }
-  
+
   .stat-card {
-    @apply bg-white border-2 border-black rounded-xl p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1;
+    @apply bg-white border-2 border-black rounded-xl p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 dark:bg-gray-900 dark:border-white;
   }
 }
 
@@ -69,7 +69,19 @@
   background: #555;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
 /* Loading animation */
 .loading {
-  @apply inline-block w-5 h-5 border-2 border-gray-300 border-t-black rounded-full animate-spin;
+  @apply inline-block w-5 h-5 border-2 border-gray-300 border-t-black rounded-full animate-spin dark:border-gray-600 dark:border-t-white;
 }
