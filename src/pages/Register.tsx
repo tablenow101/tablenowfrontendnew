@@ -12,6 +12,7 @@ const Register: React.FC = () => {
         ownerName: '',
         phone: '',
         address: '',
+        website: '',
         cuisineType: '',
     });
     const [error, setError] = useState('');
@@ -66,9 +67,29 @@ const Register: React.FC = () => {
                 restaurantName: data.name  || prev.restaurantName,
                 phone:          data.phone || prev.phone,
                 address:        data.address || prev.address,
+                website:        data.website || prev.website,
                 cuisineType:    data.cuisine_type || prev.cuisineType,
             }));
         } catch { /* silent — user can fill manually */ }
+    }
+
+    async function handleWebsiteBlur() {
+        if (!formData.website || formData.website.length < 5) return;
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/restaurants/prefill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ website_url: formData.website }),
+            });
+            const data = await res.json();
+            setFormData((prev) => ({
+                ...prev,
+                restaurantName: prev.restaurantName || data.name || '',
+                phone:          prev.phone || data.phone || '',
+                address:        prev.address || data.address || '',
+                cuisineType:    prev.cuisineType || data.cuisine_type || '',
+            }));
+        } catch { /* silent */ }
     }
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -274,6 +295,18 @@ const Register: React.FC = () => {
                                 onChange={handleChange}
                                 className="input"
                                 placeholder="123 Main St, City, Country"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Website</label>
+                            <input
+                                type="url"
+                                placeholder="https://votre-restaurant.fr"
+                                value={formData.website || ''}
+                                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                                onBlur={handleWebsiteBlur}
+                                className="input w-full"
                             />
                         </div>
 
