@@ -157,7 +157,7 @@ const Dashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       const today = new Date();
-      let params: any = {};
+      let params: any = { dateRange };
       if (dateRange === 'today') {
         params.startDate = today.toISOString().split('T')[0];
         params.endDate = today.toISOString().split('T')[0];
