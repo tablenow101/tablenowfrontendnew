@@ -154,6 +154,7 @@ const Settings: React.FC = () => {
   const [hours, setHours] = useState<Record<string, { open: boolean; from: string; to: string }>>(DEFAULT_HOURS);
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [totalCapacity, setTotalCapacity] = useState(40);
+  const [tableCount, setTableCount] = useState(20);
   const [confirmationEmail, setConfirmationEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [savingSection, setSavingSection] = useState<string | null>(null);
@@ -193,6 +194,7 @@ const Settings: React.FC = () => {
       if (s.opening_hours && Object.keys(s.opening_hours).length > 0) setHours(s.opening_hours);
       if (s.services && Object.keys(s.services).length > 0) setServices(s.services);
       if (s.total_capacity) setTotalCapacity(s.total_capacity);
+      if (s.table_count) setTableCount(s.table_count);
       setConfirmationEmail(s.confirmation_email || s.email || '');
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -422,9 +424,12 @@ const Settings: React.FC = () => {
         {/* 5. Services & Capacité */}
         <SectionCard title="Services & Capacité" icon={Utensils}>
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
-              <Field label="Capacité totale">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Capacité totale (couverts)">
                 <Input value={String(totalCapacity)} onChange={(v) => setTotalCapacity(parseInt(v) || 0)} type="number" />
+              </Field>
+              <Field label="Nombre de tables">
+                <Input value={String(tableCount)} onChange={(v) => setTableCount(parseInt(v) || 0)} type="number" />
               </Field>
               <Field label="Groupe max">
                 <Input value={String(settings.max_party_size || '')} onChange={(v) => handleChange('max_party_size', v)} type="number" />
@@ -499,7 +504,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
           <SaveButton loading={savingSection === 'capacity'} onClick={() => saveSection('capacity', {
-            total_capacity: totalCapacity, services,
+            total_capacity: totalCapacity, table_count: tableCount, services,
             max_party_size: settings.max_party_size ? parseInt(settings.max_party_size) : undefined,
             advance_booking_days: settings.advance_booking_days ? parseInt(settings.advance_booking_days) : undefined,
           })} />
