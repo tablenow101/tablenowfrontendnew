@@ -50,7 +50,7 @@ function StatCard({
         </div>
         <div className="flex items-center justify-between mt-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-          {change !== undefined && (
+          {change !== undefined && change !== 0 && (
             <div className={`flex items-center gap-1 text-xs font-medium ${positive ? 'text-green-400' : 'text-red-400'}`}>
               {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
               {Math.abs(change)}%
@@ -79,6 +79,8 @@ function BookingCard({ booking }: { booking: any }) {
         <p className="text-sm font-semibold text-white truncate">{booking.guest_name || 'Client'}</p>
         <p className="text-xs text-gray-500">
           {booking.booking_time || '—'} · {booking.party_size || booking.covers || 0} couverts
+          {booking.occasion && ` · ${booking.occasion}`}
+          {booking.table && ` · Table ${booking.table}`}
         </p>
       </div>
       <div className="flex items-center gap-1.5">
@@ -260,6 +262,7 @@ const Dashboard: React.FC = () => {
             label="Réservations"
             value={totalBookings}
             sub={`${confirmedBookings} confirmées`}
+            change={stats?.bookings?.change}
             icon={Calendar}
             href={`/r/${slug}/bookings`}
             accent={totalBookings > 0}
@@ -268,6 +271,7 @@ const Dashboard: React.FC = () => {
             label="Appels"
             value={totalCalls}
             sub={`${stats?.calls?.successful || totalCalls} traités`}
+            change={stats?.calls?.change}
             icon={Phone}
             href={`/r/${slug}/calls`}
           />
@@ -275,6 +279,7 @@ const Dashboard: React.FC = () => {
             label="Couverts"
             value={totalGuests}
             sub={totalGuests > 0 ? `Moy. ${Math.round(totalGuests / Math.max(totalBookings, 1))} / rés.` : undefined}
+            change={stats?.bookings?.guestsChange}
             icon={Users}
             href={`/r/${slug}/bookings`}
           />
@@ -282,6 +287,7 @@ const Dashboard: React.FC = () => {
             label="Durée moy."
             value={formatDuration(avgCallDuration)}
             sub="par appel"
+            change={stats?.calls?.durationChange}
             icon={Clock}
             href={`/r/${slug}/calls`}
           />
@@ -329,14 +335,45 @@ const Dashboard: React.FC = () => {
           <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6 space-y-4">
             <h2 className="text-sm font-semibold text-white">Métriques opérationnelles</h2>
             <div className="space-y-4">
-              {stats?.bookings?.bySource && Object.keys(stats.bookings.bySource).length > 0 ? (
-                Object.entries(stats.bookings.bySource).map(([source, count]: any) => (
-                  <div key={source} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400 capitalize">{source}</span>
-                    <span className="text-sm font-bold text-white">{count}</span>
+              {stats?.pacing !== undefined && (
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-gray-400">Pacing ce soir</span>
+                    <div className="flex items-center gap-1.5">
+                      <div className={`w-1.5 h-1.5 rounded-full ${stats.pacing >= 85 ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`} />
+                      <span className="text-sm font-bold text-white">{stats.pacing}%</span>
+                    </div>
                   </div>
-                ))
-              ) : (
+                  <div className="h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-green-500 transition-all duration-700"
+                      style={{ width: `${stats.pacing}%` }}
+                    />
+                  </div>
+                  {stats.pacing >= 85 && (
+                    <p className="text-xs text-green-500 mt-1">⚡ Forte demande</p>
+                  )}
+                </div>
+              )}
+              {stats?.turnoverRate !== undefined && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-400">Taux de rotation</span>
+                  <div className="text-right">
+                    <span className="text-sm font-bold text-white">{stats.turnoverRate.toFixed(1)}</span>
+                    <span className="text-xs text-gray-600 ml-1">/ objectif 2.1</span>
+                  </div>
+                </div>
+              )}
+              {stats?.vipsTonight !== undefined && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Star size={13} className="text-yellow-400" />
+                    <span className="text-xs text-gray-400">VIPs ce soir</span>
+                  </div>
+                  <span className="text-sm font-bold text-white">{String(stats.vipsTonight).padStart(2, '0')}</span>
+                </div>
+              )}
+              {stats?.pacing === undefined && stats?.turnoverRate === undefined && stats?.vipsTonight === undefined && (
                 <div className="flex flex-col items-center justify-center h-24 text-center">
                   <p className="text-xs text-gray-600">Données disponibles une fois</p>
                   <p className="text-xs text-gray-600">les premières réservations reçues</p>
