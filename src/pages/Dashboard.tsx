@@ -1,316 +1,403 @@
 import React, { useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { dashboardAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import {
-    Phone,
-    Calendar,
-    Users,
-    TrendingUp,
-    Clock,
-    CheckCircle,
-    XCircle,
-    PhoneCall,
-    Mail,
-    Settings as SettingsIcon,
-    AlertCircle
+  Phone, Calendar, Users, Clock, TrendingUp, TrendingDown,
+  ChevronRight, Copy, ArrowUpRight, Zap, Star
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatDuration(seconds: number): string {
+  if (!seconds) return '0s';
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}m${s.toString().padStart(2, '0')}s` : `${m}m`;
+}
+
+function formatTimestamp(ts: string): string {
+  const d = new Date(ts);
+  return d.toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatCard({
+  label, value, sub, change, icon: Icon, href, accent = false,
+}: {
+  label: string; value: string | number; sub?: string; change?: number;
+  icon: React.ElementType; href: string; accent?: boolean;
+}) {
+  const positive = change !== undefined && change >= 0;
+  return (
+    <Link to={href} className="group block">
+      <div className={`
+        relative overflow-hidden rounded-2xl border p-5 transition-all duration-200
+        hover:border-green-500/40 hover:shadow-[0_0_24px_rgba(34,197,94,0.08)]
+        ${accent ? 'bg-green-500/10 border-green-500/20' : 'bg-[#111] border-[#1f1f1f]'}
+      `}>
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-2 rounded-xl ${accent ? 'bg-green-500/20' : 'bg-[#1a1a1a]'}`}>
+            <Icon size={18} className={accent ? 'text-green-400' : 'text-gray-400'} />
+          </div>
+          <ChevronRight size={14} className="text-gray-600 group-hover:text-green-500 group-hover:translate-x-0.5 transition-all" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-3xl font-bold text-white tracking-tight">{value}</p>
+          {sub && <p className="text-xs text-green-400 font-medium">{sub}</p>}
+        </div>
+        <div className="flex items-center justify-between mt-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+          {change !== undefined && (
+            <div className={`flex items-center gap-1 text-xs font-medium ${positive ? 'text-green-400' : 'text-red-400'}`}>
+              {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+              {Math.abs(change)}%
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function BookingCard({ booking }: { booking: any }) {
+  const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
+    confirmed: { label: 'Confirmé', color: 'text-green-400', dot: 'bg-green-400' },
+    pending: { label: 'En attente', color: 'text-yellow-400', dot: 'bg-yellow-400' },
+    cancelled: { label: 'Annulé', color: 'text-red-400', dot: 'bg-red-400' },
+  };
+  const cfg = statusConfig[booking.status] || statusConfig.pending;
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#2a2a2a] transition-colors">
+      <div className="w-10 h-10 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+        <Users size={16} className="text-gray-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">{booking.guest_name || 'Client'}</p>
+        <p className="text-xs text-gray-500">
+          {booking.booking_time || '—'} · {booking.party_size || booking.covers || 0} couverts
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+        <span className={`text-xs font-medium ${cfg.color}`}>{cfg.label}</span>
+      </div>
+    </div>
+  );
+}
+
+function CallCard({ call }: { call: any }) {
+  const outcomeConfig: Record<string, { label: string; color: string }> = {
+    completed: { label: 'Terminé', color: 'bg-green-500/10 text-green-400 border-green-500/20' },
+    missed: { label: 'Manqué', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' },
+    failed: { label: 'Échoué', color: 'bg-red-500/10 text-red-400 border-red-500/20' },
+    in_progress: { label: 'En cours', color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
+  };
+  const cfg = outcomeConfig[call.status] || outcomeConfig.completed;
+
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#2a2a2a] transition-colors">
+      <div className="w-10 h-10 rounded-full bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
+        <Phone size={15} className="text-gray-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-white truncate">
+          {call.caller_number || 'Inconnu'}
+        </p>
+        <p className="text-xs text-gray-500">
+          {formatTimestamp(call.created_at || call.started_at)} · {formatDuration(call.duration || 0)}
+        </p>
+      </div>
+      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${cfg.color}`}>
+        {cfg.label}
+      </span>
+    </div>
+  );
+}
+
+function SetupBanner({ slug }: { slug: string }) {
+  return (
+    <div className="flex items-center gap-4 p-4 rounded-2xl bg-yellow-500/5 border border-yellow-500/20 mb-6">
+      <div className="p-2 rounded-xl bg-yellow-500/10">
+        <Zap size={16} className="text-yellow-400" />
+      </div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-yellow-300">Configuration incomplète</p>
+        <p className="text-xs text-yellow-500/80">Finalise la configuration de ton assistant IA pour commencer à recevoir des réservations.</p>
+      </div>
+      <Link
+        to={`/r/${slug}/settings`}
+        className="text-xs font-semibold text-yellow-400 hover:text-yellow-300 flex items-center gap-1 whitespace-nowrap"
+      >
+        Configurer <ArrowUpRight size={12} />
+      </Link>
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const Dashboard: React.FC = () => {
-    const { user } = useAuth();
-    const [stats, setStats] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
-    const [dateRange, setDateRange] = useState('all');
+  const { user } = useAuth();
+  const { restaurantSlug } = useParams();
+  const slug = restaurantSlug || user?.slug || '';
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<'today' | '7d' | '30d' | 'all'>('all');
 
-    useEffect(() => {
-        fetchStats();
-    }, [dateRange]);
+  useEffect(() => {
+    fetchStats();
+  }, [dateRange]);
 
-    const fetchStats = async () => {
-        try {
-            const today = new Date();
-            let params: any = {};
-
-            if (dateRange === 'upcoming90') {
-                const end = new Date();
-                end.setDate(end.getDate() + 90);
-                params.startDate = today.toISOString().split('T')[0];
-                params.endDate = end.toISOString().split('T')[0];
-            } else if (dateRange !== 'all') {
-                const days = parseInt(dateRange, 10);
-                const start = new Date();
-                start.setDate(start.getDate() - days);
-                params.startDate = start.toISOString().split('T')[0];
-                params.endDate = today.toISOString().split('T')[0];
-            }
-
-            const response = await dashboardAPI.getStats(params);
-            setStats(response.data);
-        } catch (error) {
-            console.error('Failed to fetch stats:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-64">
-                <div className="loading w-12 h-12"></div>
-            </div>
-        );
+  const fetchStats = async () => {
+    try {
+      const today = new Date();
+      let params: any = {};
+      if (dateRange === 'today') {
+        params.startDate = today.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      } else if (dateRange !== 'all') {
+        const days = dateRange === '7d' ? 7 : 30;
+        const start = new Date();
+        start.setDate(start.getDate() - days);
+        params.startDate = start.toISOString().split('T')[0];
+        params.endDate = today.toISOString().split('T')[0];
+      }
+      const response = await dashboardAPI.getStats(params);
+      setStats(response.data);
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    const COLORS = ['#000000', '#666666', '#999999', '#cccccc'];
-
+  if (loading) {
     return (
-        <div className="space-y-6 animate-fade-in">
-            {/* AI Setup Alert */}
-            {(user?.status === 'error' || !user?.vapi_assistant_id) && (
-                <div className="bg-red-50 border-2 border-red-500 p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 shadow-sm animate-pulse-subtle">
-                    <div className="flex items-center space-x-3">
-                        <AlertCircle className="text-red-600 flex-shrink-0" size={28} />
-                        <div>
-                            <p className="font-bold text-red-900">AI Phone Assistant Incomplete</p>
-                            <p className="text-sm text-red-700">
-                                {user?.status === 'error' 
-                                    ? "There was an error during your automated setup. We need one more click to finish."
-                                    : "Your AI assistant is not yet fully configured."}
-                            </p>
-                        </div>
-                    </div>
-                    <Link 
-                        to="/settings" 
-                        className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-bold transition-colors text-center shadow-md"
-                    >
-                        Complete Setup 🚀
-                    </Link>
-                </div>
-            )}
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Dashboard</h1>
-                    <p className="text-gray-600 mt-1">Welcome back, {user?.owner_name || user?.name}!</p>
-                </div>
-                <div className="mt-4 md:mt-0">
-                    <select
-                        value={dateRange}
-                        onChange={(e) => setDateRange(e.target.value)}
-                        className="input"
-                    >
-                        <option value="all">All time</option>
-                        <option value="7">Last 7 days</option>
-                        <option value="30">Last 30 days</option>
-                        <option value="90">Last 90 days</option>
-                        <option value="upcoming90">Next 90 days</option>
-                    </select>
-                </div>
-            </div>
-
-            {/* Quick Info Cards */}
-            {user?.vapi_phone_number && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="stat-card bg-black text-white">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-300">Your AI Phone Number</p>
-                                <p className="text-2xl font-bold mt-1">{user.vapi_phone_number}</p>
-                            </div>
-                            <PhoneCall size={40} className="text-white opacity-50" />
-                        </div>
-                    </div>
-                    <div className="stat-card bg-white">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-600">BCC Email</p>
-                                <p className="text-lg font-bold mt-1 break-all">{user.bcc_email}</p>
-                            </div>
-                            <Mail size={40} className="text-black opacity-20" />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Main Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="stat-card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Total Bookings</p>
-                            <p className="text-3xl font-bold mt-2">{stats?.bookings?.total || 0}</p>
-                            <p className="text-sm text-green-600 mt-1">
-                                {stats?.bookings?.confirmed || 0} confirmed
-                            </p>
-                        </div>
-                        <Calendar size={40} className="text-black opacity-20" />
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Total Calls</p>
-                            <p className="text-3xl font-bold mt-2">{stats?.calls?.total || 0}</p>
-                            <p className="text-sm text-green-600 mt-1">
-                                {stats?.calls?.successful || 0} successful
-                            </p>
-                        </div>
-                        <Phone size={40} className="text-black opacity-20" />
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Total Guests</p>
-                            <p className="text-3xl font-bold mt-2">{stats?.bookings?.totalGuests || 0}</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Avg: {stats?.bookings?.avgPartySize || 0} per booking
-                            </p>
-                        </div>
-                        <Users size={40} className="text-black opacity-20" />
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-gray-600">Avg Call Duration</p>
-                            <p className="text-3xl font-bold mt-2">{stats?.calls?.avgDuration || 0}s</p>
-                            <p className="text-sm text-gray-600 mt-1">
-                                Per call
-                            </p>
-                        </div>
-                        <Clock size={40} className="text-black opacity-20" />
-                    </div>
-                </div>
-            </div>
-
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Booking Sources */}
-                <div className="card">
-                    <h3 className="text-xl font-bold mb-4">Booking Sources</h3>
-                    {stats?.bookings?.bySource && Object.keys(stats.bookings.bySource).length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={Object.entries(stats.bookings.bySource).map(([name, value]) => ({ name, value }))}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {Object.entries(stats.bookings.bySource).map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="h-64 flex items-center justify-center text-gray-400">
-                            No booking data yet
-                        </div>
-                    )}
-                </div>
-
-                {/* Booking Status */}
-                <div className="card">
-                    <h3 className="text-xl font-bold mb-4">Booking Status</h3>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between p-4 bg-green-50 border-2 border-green-500 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                                <CheckCircle className="text-green-600" size={24} />
-                                <span className="font-medium">Confirmed</span>
-                            </div>
-                            <span className="text-2xl font-bold">{stats?.bookings?.confirmed || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-red-50 border-2 border-red-500 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                                <XCircle className="text-red-600" size={24} />
-                                <span className="font-medium">Cancelled</span>
-                            </div>
-                            <span className="text-2xl font-bold">{stats?.bookings?.cancelled || 0}</span>
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-gray-50 border-2 border-gray-300 rounded-lg">
-                            <div className="flex items-center space-x-3">
-                                <TrendingUp className="text-gray-600" size={24} />
-                                <span className="font-medium">Success Rate</span>
-                            </div>
-                            <span className="text-2xl font-bold">
-                                {stats?.bookings?.total > 0
-                                    ? ((stats.bookings.confirmed / stats.bookings.total) * 100).toFixed(1)
-                                    : 0}%
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Recent Activity */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Recent Bookings */}
-                <div className="card">
-                    <h3 className="text-xl font-bold mb-4">Recent Bookings</h3>
-                    <div className="space-y-3">
-                        {stats?.recent?.bookings && stats.recent.bookings.length > 0 ? (
-                            stats.recent.bookings.slice(0, 5).map((booking: any) => (
-                                <div key={booking.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div>
-                                        <p className="font-medium">{booking.guest_name}</p>
-                                        <p className="text-sm text-gray-600">
-                                            {booking.party_size} guests • {booking.booking_date} at {booking.booking_time}
-                                        </p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                                            booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                                'bg-gray-100 text-gray-800'
-                                        }`}>
-                                        {booking.status}
-                                    </span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-gray-400 text-center py-8">No recent bookings</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Recent Calls */}
-                <div className="card">
-                    <h3 className="text-xl font-bold mb-4">Recent Calls</h3>
-                    <div className="space-y-3">
-                        {stats?.recent?.calls && stats.recent.calls.length > 0 ? (
-                            stats.recent.calls.slice(0, 5).map((call: any) => (
-                                <div key={call.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div>
-                                        <p className="font-medium">{call.caller_number || 'Unknown'}</p>
-                                        <p className="text-sm text-gray-600">
-                                            {call.duration}s • {new Date(call.created_at).toLocaleString()}
-                                        </p>
-                                    </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${call.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                            'bg-gray-100 text-gray-800'
-                                        }`}>
-                                        {call.status}
-                                    </span>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-gray-400 text-center py-8">No recent calls</p>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="loading w-12 h-12"></div>
+      </div>
     );
+  }
+
+  const totalBookings = stats?.bookings?.total || 0;
+  const confirmedBookings = stats?.bookings?.confirmed || 0;
+  const cancelledBookings = stats?.bookings?.cancelled || 0;
+  const totalCalls = stats?.calls?.total || 0;
+  const totalGuests = stats?.bookings?.totalGuests || 0;
+  const avgCallDuration = stats?.calls?.avgDuration || 0;
+  const successRate = totalBookings > 0 ? Math.round((confirmedBookings / totalBookings) * 100) : 0;
+  const recentBookings = stats?.recent?.bookings || [];
+  const recentCalls = stats?.recent?.calls || [];
+  const isSetupIncomplete = !user?.vapi_assistant_id || (totalCalls === 0 && totalBookings === 0);
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] text-white overflow-y-auto">
+      <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Bienvenue, {user?.owner_name || user?.name}</p>
+          </div>
+          <div className="flex gap-1 p-1 rounded-xl bg-[#111] border border-[#1f1f1f]">
+            {(['today', '7d', '30d', 'all'] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setDateRange(r)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  dateRange === r ? 'bg-green-500 text-black' : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {r === 'today' ? "Aujourd'hui" : r === '7d' ? '7 jours' : r === '30d' ? '30 jours' : 'Tout'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Setup banner */}
+        {isSetupIncomplete && <SetupBanner slug={slug} />}
+
+        {/* Identity cards */}
+        {user?.vapi_phone_number && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-4 p-5 rounded-2xl bg-[#111] border border-[#1f1f1f]">
+              <div className="p-2.5 rounded-xl bg-[#1a1a1a]">
+                <Phone size={18} className="text-green-400" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 mb-1">Numéro IA</p>
+                <p className="text-base font-bold text-white font-mono">{user.vapi_phone_number}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 p-5 rounded-2xl bg-[#111] border border-[#1f1f1f]">
+              <div className="p-2.5 rounded-xl bg-[#1a1a1a]">
+                <Calendar size={18} className="text-blue-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-500 mb-1">BCC Email</p>
+                <p className="text-xs text-white font-mono truncate">{user.bcc_email || '—'}</p>
+              </div>
+              {user.bcc_email && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(user.bcc_email)}
+                  className="p-1.5 rounded-lg hover:bg-[#1a1a1a] transition-colors flex-shrink-0"
+                >
+                  <Copy size={13} className="text-gray-500 hover:text-white" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Réservations"
+            value={totalBookings}
+            sub={`${confirmedBookings} confirmées`}
+            icon={Calendar}
+            href={`/r/${slug}/bookings`}
+            accent={totalBookings > 0}
+          />
+          <StatCard
+            label="Appels"
+            value={totalCalls}
+            sub={`${stats?.calls?.successful || totalCalls} traités`}
+            icon={Phone}
+            href={`/r/${slug}/calls`}
+          />
+          <StatCard
+            label="Couverts"
+            value={totalGuests}
+            sub={totalGuests > 0 ? `Moy. ${Math.round(totalGuests / Math.max(totalBookings, 1))} / rés.` : undefined}
+            icon={Users}
+            href={`/r/${slug}/bookings`}
+          />
+          <StatCard
+            label="Durée moy."
+            value={formatDuration(avgCallDuration)}
+            sub="par appel"
+            icon={Clock}
+            href={`/r/${slug}/calls`}
+          />
+        </div>
+
+        {/* Booking status + Operational metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Booking Status */}
+          <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-white">Statut des réservations</h2>
+              <Link to={`/r/${slug}/bookings`} className="text-xs text-green-500 hover:text-green-400 flex items-center gap-1">
+                Voir tout <ArrowUpRight size={11} />
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Confirmées', value: confirmedBookings, total: Math.max(totalBookings, 1), color: 'bg-green-500' },
+                { label: 'Annulées', value: cancelledBookings, total: Math.max(totalBookings, 1), color: 'bg-red-500' },
+              ].map(({ label, value, total, color }) => (
+                <div key={label}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="text-gray-400">{label}</span>
+                    <span className="text-white font-medium">{value}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-[#1a1a1a] overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${color} transition-all duration-700`}
+                      style={{ width: `${Math.round((value / total) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <div className="flex items-center justify-between pt-2 border-t border-[#1a1a1a]">
+                <span className="text-xs text-gray-500">Taux de succès</span>
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp size={12} className="text-green-400" />
+                  <span className="text-sm font-bold text-green-400">{successRate}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Operational metrics */}
+          <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6 space-y-4">
+            <h2 className="text-sm font-semibold text-white">Métriques opérationnelles</h2>
+            <div className="space-y-4">
+              {stats?.bookings?.bySource && Object.keys(stats.bookings.bySource).length > 0 ? (
+                Object.entries(stats.bookings.bySource).map(([source, count]: any) => (
+                  <div key={source} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400 capitalize">{source}</span>
+                    <span className="text-sm font-bold text-white">{count}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-24 text-center">
+                  <p className="text-xs text-gray-600">Données disponibles une fois</p>
+                  <p className="text-xs text-gray-600">les premières réservations reçues</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Bookings + Recent Calls */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Recent Bookings */}
+          <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-semibold text-white">Réservations récentes</h2>
+              <Link to={`/r/${slug}/bookings`} className="text-xs text-green-500 hover:text-green-400 flex items-center gap-1">
+                Voir tout <ArrowUpRight size={11} />
+              </Link>
+            </div>
+            {recentBookings.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center">
+                <Calendar size={24} className="text-gray-700 mb-3" />
+                <p className="text-xs text-gray-600">Aucune réservation pour l'instant</p>
+                <p className="text-xs text-gray-700 mt-1">Les réservations apparaîtront ici</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentBookings.slice(0, 4).map((b: any) => (
+                  <BookingCard key={b.id} booking={b} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Calls */}
+          <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-sm font-semibold text-white">Appels récents</h2>
+              <Link to={`/r/${slug}/calls`} className="text-xs text-green-500 hover:text-green-400 flex items-center gap-1">
+                Voir tout <ArrowUpRight size={11} />
+              </Link>
+            </div>
+            {recentCalls.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-center">
+                <Phone size={24} className="text-gray-700 mb-3" />
+                <p className="text-xs text-gray-600">Aucun appel pour l'instant</p>
+                <p className="text-xs text-gray-700 mt-1">Les appels apparaîtront ici</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentCalls.slice(0, 4).map((c: any) => (
+                  <CallCard key={c.id} call={c} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
 };
 
 export default Dashboard;
