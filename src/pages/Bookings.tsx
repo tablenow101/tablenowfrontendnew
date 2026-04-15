@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { bookingsAPI } from '../lib/api';
-import { Calendar, Users, Clock, Mail, Phone, Search, Filter, Plus } from 'lucide-react';
+import { Calendar, Users, Clock, Mail, Phone, Search, Filter, Plus, XCircle, CheckCircle } from 'lucide-react';
 
 const Bookings: React.FC = () => {
     const [bookings, setBookings] = useState<any[]>([]);
@@ -16,7 +16,6 @@ const Bookings: React.FC = () => {
         try {
             const params: any = {};
             if (filter !== 'all') params.status = filter;
-
             const response = await bookingsAPI.getAll(params);
             setBookings(response.data.bookings || []);
         } catch (error) {
@@ -27,25 +26,25 @@ const Bookings: React.FC = () => {
     };
 
     const filteredBookings = bookings.filter(booking =>
-        booking.guest_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.confirmation_number?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const getStatusColor = (status: string) => {
+    const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'confirmed': return 'bg-green-100 text-green-800 border-green-300';
-            case 'cancelled': return 'bg-red-100 text-red-800 border-red-300';
-            case 'completed': return 'bg-blue-100 text-blue-800 border-blue-300';
-            default: return 'bg-gray-100 text-gray-800 border-gray-300';
+            case 'confirmed': return 'bg-green-500/10 text-green-400 border-green-500/20';
+            case 'cancelled': return 'bg-red-500/10 text-red-400 border-red-500/20';
+            case 'completed': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+            default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
         }
     };
 
     const getSourceIcon = (source: string) => {
         switch (source) {
-            case 'phone': return <Phone size={16} />;
-            case 'manual': return <Plus size={16} />;
-            default: return <Mail size={16} />;
+            case 'phone': return <Phone size={14} />;
+            case 'manual': return <Plus size={14} />;
+            default: return <Mail size={14} />;
         }
     };
 
@@ -57,35 +56,37 @@ const Bookings: React.FC = () => {
         );
     }
 
+    const confirmedCount = bookings.filter(b => b.status === 'confirmed').length;
+    const cancelledCount = bookings.filter(b => b.status === 'cancelled').length;
+    const totalGuests = bookings.reduce((sum, b) => sum + (b.party_size || 0), 0);
+
     return (
         <div className="space-y-6 animate-fade-in">
             {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">Bookings</h1>
-                    <p className="text-gray-600 mt-1">Manage all your reservations</p>
-                </div>
+            <div>
+                <h1 className="text-2xl font-bold text-white">Bookings</h1>
+                <p className="text-sm text-gray-500 mt-0.5">Manage all your reservations</p>
             </div>
 
             {/* Filters and Search */}
-            <div className="card">
+            <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-5">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-500" size={16} />
                         <input
                             type="text"
                             placeholder="Search by name, email, or confirmation number..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="input pl-10"
+                            className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm bg-[#0f0f0f] border border-[#1f1f1f] text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 transition-colors"
                         />
                     </div>
-                    <div className="flex items-center space-x-2">
-                        <Filter size={20} className="text-gray-600" />
+                    <div className="flex items-center gap-2">
+                        <Filter size={14} className="text-gray-500" />
                         <select
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
-                            className="input"
+                            className="px-3 py-2.5 rounded-xl text-sm bg-[#0f0f0f] border border-[#1f1f1f] text-white focus:outline-none focus:border-green-500/50 transition-colors"
                         >
                             <option value="all">All Bookings</option>
                             <option value="confirmed">Confirmed</option>
@@ -97,95 +98,89 @@ const Bookings: React.FC = () => {
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="stat-card">
-                    <p className="text-sm text-gray-600">Total</p>
-                    <p className="text-2xl font-bold mt-1">{bookings.length}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-5 h-28 flex flex-col justify-between">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Total</p>
+                    <p className="text-3xl font-bold text-white">{bookings.length}</p>
                 </div>
-                <div className="stat-card">
-                    <p className="text-sm text-gray-600">Confirmed</p>
-                    <p className="text-2xl font-bold mt-1 text-green-600">
-                        {bookings.filter(b => b.status === 'confirmed').length}
-                    </p>
+                <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-5 h-28 flex flex-col justify-between">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Confirmed</p>
+                    <p className="text-3xl font-bold text-green-400">{confirmedCount}</p>
                 </div>
-                <div className="stat-card">
-                    <p className="text-sm text-gray-600">Cancelled</p>
-                    <p className="text-2xl font-bold mt-1 text-red-600">
-                        {bookings.filter(b => b.status === 'cancelled').length}
-                    </p>
+                <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-5 h-28 flex flex-col justify-between">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Cancelled</p>
+                    <p className="text-3xl font-bold text-red-400">{cancelledCount}</p>
                 </div>
-                <div className="stat-card">
-                    <p className="text-sm text-gray-600">Total Guests</p>
-                    <p className="text-2xl font-bold mt-1">
-                        {bookings.reduce((sum, b) => sum + (b.party_size || 0), 0)}
-                    </p>
+                <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-5 h-28 flex flex-col justify-between">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">Total Guests</p>
+                    <p className="text-3xl font-bold text-white">{totalGuests}</p>
                 </div>
             </div>
 
             {/* Bookings List */}
-            <div className="card">
-                <h2 className="text-xl font-bold mb-4">All Bookings</h2>
+            <div className="rounded-2xl bg-[#111] border border-[#1f1f1f] p-6">
+                <h2 className="text-sm font-semibold text-white mb-4">All Bookings</h2>
 
                 {filteredBookings.length === 0 ? (
                     <div className="text-center py-12">
-                        <Calendar size={48} className="mx-auto text-gray-300 mb-4" />
-                        <p className="text-gray-500">No bookings found</p>
+                        <Calendar size={32} className="mx-auto text-gray-700 mb-3" />
+                        <p className="text-sm text-gray-500">No bookings found</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         {filteredBookings.map((booking) => (
                             <div
                                 key={booking.id}
-                                className="border-2 border-gray-200 rounded-lg p-4 hover:border-black transition-all duration-200"
+                                className="rounded-xl bg-[#0f0f0f] border border-[#1f1f1f] p-4 hover:border-[#2a2a2a] transition-colors"
                             >
-                                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center space-x-2 mb-2">
-                                            <h3 className="text-lg font-bold">{booking.guest_name}</h3>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(booking.status)}`}>
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <h3 className="text-sm font-semibold text-white">{booking.guest_name}</h3>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(booking.status)}`}>
                                                 {booking.status}
                                             </span>
-                                            <span className="flex items-center space-x-1 text-xs text-gray-500">
+                                            <span className="flex items-center gap-1 text-xs text-gray-500">
                                                 {getSourceIcon(booking.source)}
                                                 <span>{booking.source}</span>
                                             </span>
                                         </div>
 
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-sm text-gray-600">
-                                            <div className="flex items-center space-x-2">
-                                                <Calendar size={16} />
+                                        <div className="flex flex-wrap gap-4 text-xs text-gray-400">
+                                            <div className="flex items-center gap-1.5">
+                                                <Calendar size={13} />
                                                 <span>{booking.booking_date}</span>
                                             </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Clock size={16} />
+                                            <div className="flex items-center gap-1.5">
+                                                <Clock size={13} />
                                                 <span>{booking.booking_time}</span>
                                             </div>
-                                            <div className="flex items-center space-x-2">
-                                                <Users size={16} />
+                                            <div className="flex items-center gap-1.5">
+                                                <Users size={13} />
                                                 <span>{booking.party_size} guests</span>
                                             </div>
                                             {booking.guest_email && (
-                                                <div className="flex items-center space-x-2">
-                                                    <Mail size={16} />
-                                                    <span className="truncate">{booking.guest_email}</span>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Mail size={13} />
+                                                    <span className="truncate max-w-[200px]">{booking.guest_email}</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         {booking.special_requests && (
-                                            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                                            <div className="mt-2 p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10 text-xs text-yellow-400/80">
                                                 <strong>Special Requests:</strong> {booking.special_requests}
                                             </div>
                                         )}
 
                                         {booking.confirmation_number && (
-                                            <div className="mt-2 text-xs text-gray-500">
-                                                Confirmation: <span className="font-mono font-bold">{booking.confirmation_number}</span>
+                                            <div className="mt-2 text-xs text-gray-600">
+                                                Confirmation: <span className="font-mono font-medium text-gray-400">{booking.confirmation_number}</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    <div className="mt-4 md:mt-0 md:ml-4 flex space-x-2">
+                                    <div className="flex-shrink-0">
                                         {booking.status === 'confirmed' && (
                                             <button
                                                 onClick={() => {
@@ -193,7 +188,7 @@ const Bookings: React.FC = () => {
                                                         bookingsAPI.cancel(booking.id).then(() => fetchBookings());
                                                     }
                                                 }}
-                                                className="btn btn-secondary text-sm"
+                                                className="px-3 py-1.5 rounded-xl text-xs text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors"
                                             >
                                                 Cancel
                                             </button>

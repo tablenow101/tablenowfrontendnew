@@ -26,50 +26,49 @@ const Layout: React.FC = () => {
         { name: 'Settings', href: `${base}/settings`, icon: Settings },
     ];
 
-    const isActive = (path: string) => {
-        return location.pathname === path;
-    };
+    const isActive = (path: string) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#0A0A0A]">
             {/* Top Navigation */}
-            <nav className="bg-black text-white border-b-4 border-white">
+            <nav className="bg-[#111] border-b border-[#1f1f1f]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
+                    <div className="flex justify-between h-14">
                         <div className="flex items-center">
-                            <Link to={`${base}/dashboard`} className="text-2xl font-bold hover:opacity-80 transition-opacity">
+                            <Link to={`${base}/dashboard`} className="text-lg font-bold text-white hover:text-green-400 transition-colors">
                                 TableNow
                             </Link>
                             {user && (
-                                <span className="ml-4 text-sm text-gray-300">
+                                <span className="ml-4 text-xs text-gray-500">
                                     {user.name}
                                 </span>
                             )}
                         </div>
 
                         {/* Desktop Navigation */}
-                        <div className="hidden md:flex items-center space-x-4">
+                        <div className="hidden md:flex items-center space-x-1">
                             {navigation.map((item) => {
                                 const Icon = item.icon;
                                 return (
                                     <Link
                                         key={item.name}
                                         to={item.href}
-                                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${isActive(item.href)
-                                                ? 'bg-white text-black'
-                                                : 'text-white hover:bg-gray-800'
-                                            }`}
+                                        className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm transition-all duration-200 ${
+                                            isActive(item.href)
+                                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
+                                        }`}
                                     >
-                                        <Icon size={18} />
+                                        <Icon size={16} />
                                         <span>{item.name}</span>
                                     </Link>
                                 );
                             })}
                             <button
                                 onClick={logout}
-                                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-white hover:bg-red-600 transition-all duration-200"
+                                className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 ml-2"
                             >
-                                <LogOut size={18} />
+                                <LogOut size={16} />
                                 <span>Logout</span>
                             </button>
                         </div>
@@ -78,9 +77,9 @@ const Layout: React.FC = () => {
                         <div className="md:hidden flex items-center">
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                className="text-white hover:bg-gray-800 p-2 rounded-lg"
+                                className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-[#1a1a1a]"
                             >
-                                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
                             </button>
                         </div>
                     </div>
@@ -88,8 +87,8 @@ const Layout: React.FC = () => {
 
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-gray-700">
-                        <div className="px-2 pt-2 pb-3 space-y-1">
+                    <div className="md:hidden border-t border-[#1f1f1f]">
+                        <div className="px-3 pt-2 pb-3 space-y-1">
                             {navigation.map((item) => {
                                 const Icon = item.icon;
                                 return (
@@ -97,24 +96,22 @@ const Layout: React.FC = () => {
                                         key={item.name}
                                         to={item.href}
                                         onClick={() => setMobileMenuOpen(false)}
-                                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg ${isActive(item.href)
-                                                ? 'bg-white text-black'
-                                                : 'text-white hover:bg-gray-800'
-                                            }`}
+                                        className={`flex items-center space-x-2 px-3 py-2.5 rounded-xl text-sm ${
+                                            isActive(item.href)
+                                                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                                : 'text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
+                                        }`}
                                     >
-                                        <Icon size={18} />
+                                        <Icon size={16} />
                                         <span>{item.name}</span>
                                     </Link>
                                 );
                             })}
                             <button
-                                onClick={() => {
-                                    logout();
-                                    setMobileMenuOpen(false);
-                                }}
-                                className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-white hover:bg-red-600"
+                                onClick={() => { logout(); setMobileMenuOpen(false); }}
+                                className="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10"
                             >
-                                <LogOut size={18} />
+                                <LogOut size={16} />
                                 <span>Logout</span>
                             </button>
                         </div>
