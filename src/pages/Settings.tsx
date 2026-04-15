@@ -13,6 +13,7 @@ import {
     Users,
     Copy,
     Check,
+    Info,
 } from 'lucide-react';
 
 const DAYS = [
@@ -40,6 +41,8 @@ const DEFAULT_SERVICES = {
     dinner: { active: true, from: '19:00', to: '22:30', capacity: 20 },
 };
 
+type Toast = { type: 'success' | 'error'; text: string; section: string };
+
 const Settings: React.FC = () => {
     const { user, refreshUser } = useAuth();
     const [settings, setSettings] = useState<any>({});
@@ -48,29 +51,33 @@ const Settings: React.FC = () => {
     const [totalCapacity, setTotalCapacity] = useState(40);
     const [confirmationEmail, setConfirmationEmail] = useState('');
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [savingSection, setSavingSection] = useState<string | null>(null);
+    const [toast, setToast] = useState<Toast | null>(null);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSettings();
-
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
-        if (code) {
-            handleCalendarCallback(code);
-        }
+        if (code) handleCalendarCallback(code);
     }, []);
+
+    useEffect(() => {
+        if (toast) {
+            const t = setTimeout(() => setToast(null), 3000);
+            return () => clearTimeout(t);
+        }
+    }, [toast]);
 
     const handleCalendarCallback = async (code: string) => {
         try {
-            setMessage({ type: 'success', text: 'Connecting Google Calendar...' });
+            setToast({ type: 'success', text: 'Connecting Google Calendar...', section: 'calendar' });
             await calendarAPI.callback(code);
             await refreshUser();
-            setMessage({ type: 'success', text: 'Google Calendar connected successfully!' });
+            setToast({ type: 'success', text: 'Google Calendar connected successfully!', section: 'calendar' });
             window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to connect Google Calendar' });
+        } catch {
+            setToast({ type: 'error', text: 'Failed to connect Google Calendar', section: 'calendar' });
         }
     };
 
@@ -94,35 +101,32 @@ const Settings: React.FC = () => {
         setSettings({ ...settings, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSaving(true);
-        setMessage(null);
-
+    async function saveSection(section: string, data: Record<string, any>) {
+        setSavingSection(section);
         try {
-            await settingsAPI.update({
-                ...settings,
-                opening_hours: hours,
-                services,
-                total_capacity: totalCapacity,
-                confirmation_email: confirmationEmail,
-            });
+            await settingsAPI.update(data);
             await refreshUser();
-            setMessage({ type: 'success', text: 'Settings updated successfully!' });
+            setToast({ type: 'success', text: 'Modifications enregistrées', section });
         } catch (error: any) {
-            setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to update settings' });
+            setToast({ type: 'error', text: error.response?.data?.error || 'Erreur lors de la sauvegarde', section });
         } finally {
-            setSaving(false);
+            setSavingSection(null);
         }
-    };
+    }
+
+    function copyToClipboard(text: string, field: string) {
+        navigator.clipboard.writeText(text);
+        setCopiedField(field);
+        setTimeout(() => setCopiedField(null), 2000);
+    }
 
     const connectCalendar = async () => {
         try {
             const response = await calendarAPI.getAuthUrl();
             window.open(response.data.authUrl, '_blank');
-            setMessage({ type: 'success', text: 'Please complete the authorization in the new window' });
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to get calendar authorization URL' });
+            setToast({ type: 'success', text: 'Please complete the authorization in the new window', section: 'calendar' });
+        } catch {
+            setToast({ type: 'error', text: 'Failed to get calendar authorization URL', section: 'calendar' });
         }
     };
 
@@ -131,34 +135,44 @@ const Settings: React.FC = () => {
         try {
             await calendarAPI.disconnect();
             await refreshUser();
-            setMessage({ type: 'success', text: 'Calendar disconnected successfully' });
-        } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to disconnect calendar' });
+            setToast({ type: 'success', text: 'Calendar disconnected', section: 'calendar' });
+        } catch {
+            setToast({ type: 'error', text: 'Failed to disconnect calendar', section: 'calendar' });
         }
     };
 
     const retryVapiSetup = async () => {
         if (!confirm('This will attempt to set up your AI phone assistant. Continue?')) return;
-        setSaving(true);
-        setMessage(null);
+        setSavingSection('vapi');
         try {
             const response = await settingsAPI.retryVapi();
             await refreshUser();
             await fetchSettings();
-            setMessage({ type: 'success', text: `VAPI setup successful! Your phone number is ${response.data.phoneNumber}` });
+            setToast({ type: 'success', text: `VAPI setup successful! Phone: ${response.data.phoneNumber}`, section: 'vapi' });
         } catch (error: any) {
-            setMessage({ type: 'error', text: error.response?.data?.error || 'Failed to set up VAPI. Please contact support.' });
+            setToast({ type: 'error', text: error.response?.data?.error || 'VAPI setup failed', section: 'vapi' });
         } finally {
-            setSaving(false);
+            setSavingSection(null);
         }
     };
 
-    function copyBcc() {
-        if (user?.bcc_email) {
-            navigator.clipboard.writeText(user.bcc_email);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
+    function SectionToast({ section }: { section: string }) {
+        if (!toast || toast.section !== section) return null;
+        return (
+            <div className={`mt-3 p-3 rounded-lg flex items-center gap-2 text-sm ${toast.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {toast.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                {toast.text}
+            </div>
+        );
+    }
+
+    function SaveButton({ section, onClick }: { section: string; onClick: () => void }) {
+        const isSaving = savingSection === section;
+        return (
+            <button type="button" onClick={onClick} disabled={isSaving} className="btn btn-primary flex items-center gap-2">
+                {isSaving ? <><span className="loading mr-1"></span>Sauvegarde...</> : <><Save size={18} /> Sauvegarder</>}
+            </button>
+        );
     }
 
     if (loading) {
@@ -176,144 +190,47 @@ const Settings: React.FC = () => {
                 <p className="text-gray-600 mt-1">Manage your restaurant configuration</p>
             </div>
 
-            {message && (
-                <div className={`p-4 rounded-lg border-2 flex items-start space-x-2 ${message.type === 'success' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'}`}>
-                    {message.type === 'success' ? <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={20} /> : <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />}
-                    <p className={message.type === 'success' ? 'text-green-700' : 'text-red-700'}>{message.text}</p>
-                </div>
-            )}
-
-            {/* VAPI Integration */}
+            {/* Section 1 — General Info */}
             <div className="card">
-                <div className="flex items-center space-x-3 mb-4">
-                    <Phone size={24} />
-                    <h2 className="text-xl font-bold">AI Phone Assistant</h2>
-                </div>
-                <div className="space-y-4">
-                    <div className="p-4 bg-black text-white rounded-lg">
-                        <p className="text-sm text-gray-300">Your AI Phone Number</p>
-                        <p className="text-2xl font-bold mt-1">{user?.vapi_phone_number || 'Not configured'}</p>
-                    </div>
-                    {(!user?.vapi_phone_number || !user?.vapi_assistant_id) && (
-                        <button onClick={retryVapiSetup} disabled={saving} className="btn btn-primary w-full">
-                            {saving ? <span className="flex items-center justify-center"><span className="loading mr-2"></span>Setting up...</span> : 'Retry AI Phone Setup'}
-                        </button>
-                    )}
-                    {user?.vapi_assistant_id && (
-                        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                            <p className="text-sm text-gray-600">Assistant ID</p>
-                            <p className="font-mono text-sm mt-1">{user.vapi_assistant_id}</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* BCC Email */}
-            <div className="card">
-                <div className="flex items-center space-x-3 mb-4">
-                    <Mail size={24} />
-                    <h2 className="text-xl font-bold">Third-Party Booking Sync via Email</h2>
-                </div>
-                <div className="space-y-4">
-                    <p className="text-gray-600">Automatically sync your Zenchef or SevenRooms reservations by forwarding booking confirmation emails to this address.</p>
-                    <div className="p-4 bg-gray-50 border-2 border-gray-300 rounded-lg">
-                        <p className="text-sm text-gray-600 mb-2">Your BCC Email Address</p>
-                        <div className="flex items-center gap-2">
-                            <p className="font-mono text-lg font-bold break-all flex-1">{user?.bcc_email || 'Not configured'}</p>
-                            {user?.bcc_email && (
-                                <button onClick={copyBcc} className="p-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-                                    {copied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Google Calendar */}
-            <div className="card">
-                <div className="flex items-center space-x-3 mb-4">
-                    <Calendar size={24} />
-                    <h2 className="text-xl font-bold">Google Calendar Integration</h2>
-                </div>
-                <div className="space-y-4">
-                    <p className="text-gray-600">Connect your Google Calendar to automatically create events for new bookings.</p>
-                    {user?.google_calendar_tokens ? (
-                        <div className="p-4 bg-green-50 border-2 border-green-500 rounded-lg flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <CheckCircle className="text-green-600" size={20} />
-                                <span className="font-medium">Calendar Connected</span>
-                            </div>
-                            <button onClick={disconnectCalendar} className="btn btn-secondary text-sm">Disconnect</button>
-                        </div>
-                    ) : (
-                        <button onClick={connectCalendar} className="btn btn-primary">Connect Google Calendar</button>
-                    )}
-                </div>
-            </div>
-
-            {/* Restaurant Settings Form */}
-            <form onSubmit={handleSubmit} className="card">
                 <div className="flex items-center space-x-3 mb-4">
                     <SettingsIcon size={24} />
-                    <h2 className="text-xl font-bold">Restaurant Information</h2>
+                    <h2 className="text-xl font-bold">Informations générales</h2>
                 </div>
-
                 <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Restaurant Name</label>
+                            <label className="block text-sm font-medium mb-2">Nom du restaurant</label>
                             <input type="text" name="name" value={settings.name || ''} onChange={handleChange} className="input" required />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Owner Name</label>
+                            <label className="block text-sm font-medium mb-2">Nom du propriétaire</label>
                             <input type="text" name="owner_name" value={settings.owner_name || ''} onChange={handleChange} className="input" required />
                         </div>
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">Phone</label>
+                            <label className="block text-sm font-medium mb-2">Téléphone</label>
                             <input type="tel" name="phone" value={settings.phone || ''} onChange={handleChange} className="input" />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-2">Cuisine Type</label>
+                            <label className="block text-sm font-medium mb-2">Type de cuisine</label>
                             <input type="text" name="cuisine_type" value={settings.cuisine_type || ''} onChange={handleChange} className="input" />
                         </div>
                     </div>
-
                     <div>
-                        <label className="block text-sm font-medium mb-2">Address</label>
+                        <label className="block text-sm font-medium mb-2">Adresse</label>
                         <input type="text" name="address" value={settings.address || ''} onChange={handleChange} className="input" />
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium mb-2">Confirmation Email</label>
-                        <input type="email" value={confirmationEmail} onChange={(e) => setConfirmationEmail(e.target.value)} className="input" placeholder="reservations@votre-restaurant.fr" />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Total Capacity</label>
-                            <input type="number" value={totalCapacity} onChange={(e) => setTotalCapacity(parseInt(e.target.value) || 0)} className="input" min="1" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Max Party Size</label>
-                            <input type="number" name="max_party_size" value={settings.max_party_size || ''} onChange={handleChange} className="input" min="1" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2">Advance Booking (days)</label>
-                            <input type="number" name="advance_booking_days" value={settings.advance_booking_days || ''} onChange={handleChange} className="input" min="1" />
-                        </div>
-                    </div>
+                    <SaveButton section="info" onClick={() => saveSection('info', { name: settings.name, owner_name: settings.owner_name, phone: settings.phone, cuisine_type: settings.cuisine_type, address: settings.address })} />
+                    <SectionToast section="info" />
                 </div>
-            </form>
+            </div>
 
-            {/* Opening Hours */}
+            {/* Section 2 — Opening Hours */}
             <div className="card">
                 <div className="flex items-center space-x-3 mb-4">
                     <Clock size={24} />
-                    <h2 className="text-xl font-bold">Opening Hours</h2>
+                    <h2 className="text-xl font-bold">Horaires d'ouverture</h2>
                 </div>
                 <div className="space-y-3">
                     {DAYS.map(({ key, label }) => {
@@ -340,66 +257,87 @@ const Settings: React.FC = () => {
                             </div>
                         );
                     })}
+                    <div className="pt-2">
+                        <SaveButton section="hours" onClick={() => saveSection('hours', { opening_hours: hours })} />
+                    </div>
+                    <SectionToast section="hours" />
                 </div>
             </div>
 
-            {/* Services */}
+            {/* Section 3 — Services & Capacity */}
             <div className="card">
                 <div className="flex items-center space-x-3 mb-4">
                     <Users size={24} />
-                    <h2 className="text-xl font-bold">Services</h2>
+                    <h2 className="text-xl font-bold">Services & Capacité</h2>
                 </div>
                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Capacité totale (couverts)</label>
+                        <input type="number" min={1} className="input !w-32" value={totalCapacity} onChange={(e) => setTotalCapacity(parseInt(e.target.value) || 0)} />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Max Party Size</label>
+                            <input type="number" name="max_party_size" value={settings.max_party_size || ''} onChange={handleChange} className="input" min="1" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-2">Advance Booking (days)</label>
+                            <input type="number" name="advance_booking_days" value={settings.advance_booking_days || ''} onChange={handleChange} className="input" min="1" />
+                        </div>
+                    </div>
+
                     {/* Lunch */}
                     <div className="p-4 border-2 border-gray-200 rounded-xl space-y-3">
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setServices({ ...services, lunch: { ...services.lunch, active: !services.lunch.active } })}
-                                className={`w-12 h-6 rounded-full transition-colors relative ${services.lunch.active ? 'bg-green-500' : 'bg-gray-300'}`}
-                            >
+                            <button type="button" onClick={() => setServices({ ...services, lunch: { ...services.lunch, active: !services.lunch.active } })} className={`w-12 h-6 rounded-full transition-colors relative ${services.lunch.active ? 'bg-green-500' : 'bg-gray-300'}`}>
                                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${services.lunch.active ? 'left-6' : 'left-0.5'}`} />
                             </button>
-                            <span className="font-semibold">Lunch</span>
+                            <span className="font-semibold">Déjeuner</span>
                         </div>
                         {services.lunch.active && (
                             <div className="flex flex-wrap items-center gap-3">
-                                <div><label className="text-xs text-gray-500">From</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.lunch.from} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, from: e.target.value } })} /></div>
-                                <div><label className="text-xs text-gray-500">To</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.lunch.to} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, to: e.target.value } })} /></div>
-                                <div><label className="text-xs text-gray-500">Max covers</label><input type="number" min={1} className="input !w-24 !py-1.5 text-center" value={services.lunch.capacity} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, capacity: parseInt(e.target.value) || 0 } })} /></div>
+                                <div><label className="text-xs text-gray-500">De</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.lunch.from} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, from: e.target.value } })} /></div>
+                                <div><label className="text-xs text-gray-500">À</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.lunch.to} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, to: e.target.value } })} /></div>
+                                <div><label className="text-xs text-gray-500">Couverts max</label><input type="number" min={1} className="input !w-24 !py-1.5 text-center" value={services.lunch.capacity} onChange={(e) => setServices({ ...services, lunch: { ...services.lunch, capacity: parseInt(e.target.value) || 0 } })} /></div>
                             </div>
                         )}
                     </div>
+
                     {/* Dinner */}
                     <div className="p-4 border-2 border-gray-200 rounded-xl space-y-3">
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setServices({ ...services, dinner: { ...services.dinner, active: !services.dinner.active } })}
-                                className={`w-12 h-6 rounded-full transition-colors relative ${services.dinner.active ? 'bg-green-500' : 'bg-gray-300'}`}
-                            >
+                            <button type="button" onClick={() => setServices({ ...services, dinner: { ...services.dinner, active: !services.dinner.active } })} className={`w-12 h-6 rounded-full transition-colors relative ${services.dinner.active ? 'bg-green-500' : 'bg-gray-300'}`}>
                                 <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${services.dinner.active ? 'left-6' : 'left-0.5'}`} />
                             </button>
-                            <span className="font-semibold">Dinner</span>
+                            <span className="font-semibold">Dîner</span>
                         </div>
                         {services.dinner.active && (
                             <div className="flex flex-wrap items-center gap-3">
-                                <div><label className="text-xs text-gray-500">From</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.dinner.from} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, from: e.target.value } })} /></div>
-                                <div><label className="text-xs text-gray-500">To</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.dinner.to} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, to: e.target.value } })} /></div>
-                                <div><label className="text-xs text-gray-500">Max covers</label><input type="number" min={1} className="input !w-24 !py-1.5 text-center" value={services.dinner.capacity} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, capacity: parseInt(e.target.value) || 0 } })} /></div>
+                                <div><label className="text-xs text-gray-500">De</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.dinner.from} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, from: e.target.value } })} /></div>
+                                <div><label className="text-xs text-gray-500">À</label><input type="time" className="input !w-28 !py-1.5 text-center" value={services.dinner.to} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, to: e.target.value } })} /></div>
+                                <div><label className="text-xs text-gray-500">Couverts max</label><input type="number" min={1} className="input !w-24 !py-1.5 text-center" value={services.dinner.capacity} onChange={(e) => setServices({ ...services, dinner: { ...services.dinner, capacity: parseInt(e.target.value) || 0 } })} /></div>
                             </div>
                         )}
                     </div>
+
+                    <SaveButton section="services" onClick={() => saveSection('services', { total_capacity: totalCapacity, services, max_party_size: settings.max_party_size ? parseInt(settings.max_party_size) : undefined, advance_booking_days: settings.advance_booking_days ? parseInt(settings.advance_booking_days) : undefined })} />
+                    <SectionToast section="services" />
                 </div>
             </div>
 
-            {/* Policies */}
-            <form onSubmit={handleSubmit} className="card">
+            {/* Section 4 — Notifications */}
+            <div className="card">
                 <div className="flex items-center space-x-3 mb-4">
-                    <SettingsIcon size={24} />
-                    <h2 className="text-xl font-bold">Policies & Features</h2>
+                    <Mail size={24} />
+                    <h2 className="text-xl font-bold">Notifications</h2>
                 </div>
                 <div className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-2">Email de confirmation des réservations</label>
+                        <input type="email" value={confirmationEmail} onChange={(e) => setConfirmationEmail(e.target.value)} className="input" placeholder="reservations@votre-restaurant.fr" />
+                        <p className="text-xs text-gray-400 mt-1">Les confirmations et notifications de réservation seront envoyées à cette adresse.</p>
+                    </div>
                     <div>
                         <label className="block text-sm font-medium mb-2">Cancellation Policy</label>
                         <textarea name="cancellation_policy" value={settings.cancellation_policy || ''} onChange={handleChange} className="input" rows={3} placeholder="e.g., 24 hours notice required" />
@@ -408,16 +346,100 @@ const Settings: React.FC = () => {
                         <label className="block text-sm font-medium mb-2">Special Features</label>
                         <textarea name="special_features" value={settings.special_features || ''} onChange={handleChange} className="input" rows={3} placeholder="e.g., Outdoor seating, Private dining" />
                     </div>
-
-                    <button type="submit" disabled={saving} className="btn btn-primary">
-                        {saving ? (
-                            <span className="flex items-center justify-center"><span className="loading mr-2"></span>Saving...</span>
-                        ) : (
-                            <span className="flex items-center justify-center"><Save size={20} className="mr-2" />Save All Settings</span>
-                        )}
-                    </button>
+                    <SaveButton section="notifications" onClick={() => saveSection('notifications', { confirmation_email: confirmationEmail, cancellation_policy: settings.cancellation_policy, special_features: settings.special_features })} />
+                    <SectionToast section="notifications" />
                 </div>
-            </form>
+            </div>
+
+            {/* VAPI Integration */}
+            <div className="card">
+                <div className="flex items-center space-x-3 mb-4">
+                    <Phone size={24} />
+                    <h2 className="text-xl font-bold">AI Phone Assistant</h2>
+                </div>
+                <div className="space-y-4">
+                    <div className="p-4 bg-black text-white rounded-lg">
+                        <p className="text-sm text-gray-300">Your AI Phone Number</p>
+                        <p className="text-2xl font-bold mt-1">{user?.vapi_phone_number || 'Not configured'}</p>
+                    </div>
+                    {(!user?.vapi_phone_number || !user?.vapi_assistant_id) && (
+                        <button onClick={retryVapiSetup} disabled={savingSection === 'vapi'} className="btn btn-primary w-full">
+                            {savingSection === 'vapi' ? <span className="flex items-center justify-center"><span className="loading mr-2"></span>Setting up...</span> : 'Retry AI Phone Setup'}
+                        </button>
+                    )}
+                    <SectionToast section="vapi" />
+                </div>
+            </div>
+
+            {/* Google Calendar */}
+            <div className="card">
+                <div className="flex items-center space-x-3 mb-4">
+                    <Calendar size={24} />
+                    <h2 className="text-xl font-bold">Google Calendar</h2>
+                </div>
+                <div className="space-y-4">
+                    <p className="text-gray-600">Connect your Google Calendar to automatically create events for new bookings.</p>
+                    {user?.google_calendar_tokens ? (
+                        <div className="p-4 bg-green-50 border-2 border-green-500 rounded-lg flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <CheckCircle className="text-green-600" size={20} />
+                                <span className="font-medium">Calendar Connected</span>
+                            </div>
+                            <button onClick={disconnectCalendar} className="btn btn-secondary text-sm">Disconnect</button>
+                        </div>
+                    ) : (
+                        <button onClick={connectCalendar} className="btn btn-primary">Connect Google Calendar</button>
+                    )}
+                    <SectionToast section="calendar" />
+                </div>
+            </div>
+
+            {/* Section 5 — System Info (read-only) */}
+            <div className="card">
+                <div className="flex items-center space-x-3 mb-4">
+                    <Info size={24} />
+                    <h2 className="text-xl font-bold">Informations système</h2>
+                </div>
+                <p className="text-sm text-gray-400 mb-4">Ces informations sont gérées automatiquement par TableNow.</p>
+                <div className="space-y-3">
+                    {/* BCC Email */}
+                    <div className="flex items-center gap-2">
+                        <label className="w-40 text-sm font-medium text-gray-600">Adresse BCC</label>
+                        <div className="flex-1 flex items-center gap-2">
+                            <input type="text" className="input !bg-gray-50 font-mono text-sm flex-1" value={user?.bcc_email || 'Non configuré'} readOnly />
+                            {user?.bcc_email && (
+                                <button onClick={() => copyToClipboard(user.bcc_email, 'bcc')} className="p-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                                    {copiedField === 'bcc' ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    {/* AI Phone */}
+                    <div className="flex items-center gap-2">
+                        <label className="w-40 text-sm font-medium text-gray-600">Téléphone AI</label>
+                        <div className="flex-1 flex items-center gap-2">
+                            <input type="text" className="input !bg-gray-50 font-mono text-sm flex-1" value={user?.vapi_phone_number || 'Non configuré'} readOnly />
+                            {user?.vapi_phone_number && (
+                                <button onClick={() => copyToClipboard(user.vapi_phone_number, 'phone')} className="p-2 border-2 border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
+                                    {copiedField === 'phone' ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                    {/* Slug */}
+                    <div className="flex items-center gap-2">
+                        <label className="w-40 text-sm font-medium text-gray-600">URL du restaurant</label>
+                        <input type="text" className="input !bg-gray-50 font-mono text-sm flex-1" value={user?.slug ? `/r/${user.slug}` : '—'} readOnly />
+                    </div>
+                    {/* Assistant ID */}
+                    {user?.vapi_assistant_id && (
+                        <div className="flex items-center gap-2">
+                            <label className="w-40 text-sm font-medium text-gray-600">Assistant ID</label>
+                            <input type="text" className="input !bg-gray-50 font-mono text-sm flex-1" value={user.vapi_assistant_id} readOnly />
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
