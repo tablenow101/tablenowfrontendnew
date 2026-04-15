@@ -1,26 +1,127 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  * {
-    @apply border-[#1f1f1f];
-  }
+:root {
+  /* Colors */
+  --bg-page: #0A0F1C;
+  --bg-card: #0F1626;
+  --bg-input: rgba(255, 255, 255, 0.04);
+  --bg-toggle: rgba(255, 255, 255, 0.05);
+  --border-card: rgba(255, 255, 255, 0.15);
+  --border-input: rgba(255, 255, 255, 0.10);
+  --border-input-focus: rgba(255, 255, 255, 0.40);
+  --border-input-error: #EF4444;
+  --text-primary: #FFFFFF;
+  --text-secondary: #8B95A7;
+  --text-tertiary: #D1D5DB;
+  --text-error: #FCA5A5;
+  --text-success: #86EFAC;
+  --btn-primary-bg: #FFFFFF;
+  --btn-primary-fg: #0A0F1C;
+  --btn-primary-hover: #E5E7EB;
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: rgba(255, 255, 255, 0.20);
+  --icon-circle-bg: #FFFFFF;
+  --icon-circle-fg: #0A0F1C;
+  --progress-track: rgba(255, 255, 255, 0.10);
+  --progress-fill: #FFFFFF;
+}
 
-  html, body {
-    background-color: #0A0A0A;
-    color: #FFFFFF;
-    font-family: 'Inter', sans-serif;
+@layer base {
+  html {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+  }
+
+  input, textarea, select {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-input);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 0 12px;
+    transition: background-color 150ms ease-out, border-color 150ms ease-out;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--text-secondary);
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--border-input-focus);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.10);
+  }
+
+  input:disabled, textarea:disabled, select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  input[aria-invalid="true"], textarea[aria-invalid="true"] {
+    border-color: var(--border-input-error);
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply h-12 w-full px-4 rounded-lg font-semibold text-sm transition-all duration-150 ease-out;
+    background-color: var(--btn-primary-bg);
+    color: var(--btn-primary-fg);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: var(--btn-primary-hover);
+  }
+
+  .btn-primary:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    @apply h-11 w-full px-4 rounded-lg font-medium text-sm transition-all duration-150 ease-out;
+    background-color: var(--btn-secondary-bg);
+    color: var(--text-primary);
+    border: 1px solid var(--btn-secondary-border);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Focus ring for accessibility */
+  .focus-ring:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.40);
+    outline-offset: 2px;
   }
 }
 
@@ -31,19 +132,19 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0A0A0A;
+  background: var(--bg-page);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #333;
+  background: rgba(255, 255, 255, 0.10);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: rgba(255, 255, 255, 0.20);
 }
 
 /* Loading spinner */
 .loading {
-  @apply inline-block w-5 h-5 border-2 border-[#333] border-t-green-500 rounded-full animate-spin;
+  @apply inline-block w-5 h-5 border-2 border-[rgba(255,255,255,0.1)] border-t-white rounded-full animate-spin;
 }
