@@ -25,8 +25,32 @@ const Bookings: React.FC = () => {
         }
     };
 
+    const getBookingName = (booking: any) => {
+        return booking.guest_name || 'Caller';
+    };
+
+    const getBookingDateTime = (booking: any) => {
+        if (booking.booked_for) {
+            const date = new Date(booking.booked_for);
+            return date.toLocaleDateString('fr-FR');
+        }
+        return booking.booking_date || '—';
+    };
+
+    const getBookingTime = (booking: any) => {
+        if (booking.booked_for) {
+            const date = new Date(booking.booked_for);
+            return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        }
+        return booking.booking_time || '—';
+    };
+
+    const getGuestCount = (booking: any) => {
+        return booking.covers || booking.party_size || 0;
+    };
+
     const filteredBookings = bookings.filter(booking =>
-        booking.guest_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getBookingName(booking).toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.guest_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         booking.confirmation_number?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -58,7 +82,7 @@ const Bookings: React.FC = () => {
 
     const confirmedCount = bookings.filter(b => b.status === 'confirmed').length;
     const cancelledCount = bookings.filter(b => b.status === 'cancelled').length;
-    const totalGuests = bookings.reduce((sum, b) => sum + (b.party_size || 0), 0);
+    const totalGuests = bookings.reduce((sum, b) => sum + getGuestCount(b), 0);
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -136,7 +160,7 @@ const Bookings: React.FC = () => {
                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-2">
-                                            <h3 className="text-sm font-semibold text-white">{booking.guest_name}</h3>
+                                            <h3 className="text-sm font-semibold text-white">{getBookingName(booking)}</h3>
                                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusBadge(booking.status)}`}>
                                                 {booking.status}
                                             </span>
@@ -149,15 +173,15 @@ const Bookings: React.FC = () => {
                                         <div className="flex flex-wrap gap-4 text-xs text-gray-400">
                                             <div className="flex items-center gap-1.5">
                                                 <Calendar size={13} />
-                                                <span>{booking.booking_date}</span>
+                                                <span>{getBookingDateTime(booking)}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <Clock size={13} />
-                                                <span>{booking.booking_time}</span>
+                                                <span>{getBookingTime(booking)}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <Users size={13} />
-                                                <span>{booking.party_size} guests</span>
+                                                <span>{getGuestCount(booking)} guests</span>
                                             </div>
                                             {booking.guest_email && (
                                                 <div className="flex items-center gap-1.5">
