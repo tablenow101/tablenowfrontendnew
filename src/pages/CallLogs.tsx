@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { dashboardAPI } from '../lib/api';
-import { Phone, Clock, Calendar, X } from 'lucide-react';
+import { Phone, Clock, Calendar, X, Download } from 'lucide-react';
 
 const CallLogs: React.FC = () => {
     const [calls, setCalls] = useState<any[]>([]);
@@ -35,6 +35,32 @@ const CallLogs: React.FC = () => {
             case 'failed': return 'bg-red-500/10 text-red-400 border-red-500/20';
             default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
         }
+    };
+
+    const downloadTranscript = (call: any) => {
+        if (!call.transcript) return;
+
+        const fileName = `transcript_${call.caller_number || 'unknown'}_${new Date(call.created_at).toISOString().split('T')[0]}.txt`;
+        const content = `TRANSCRIPTION D'APPEL TÉLÉPHONIQUE
+=====================================
+
+Numéro: ${call.caller_number || 'Inconnu'}
+Date: ${new Date(call.created_at).toLocaleString('fr-FR')}
+Durée: ${formatDuration(call.duration || 0)}
+Statut: ${call.status}
+
+TRANSCRIPTION:
+--------------
+
+${call.transcript}`;
+
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+        element.setAttribute('download', fileName);
+        element.style.display = 'none';
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
     };
 
     if (loading) {
@@ -194,7 +220,16 @@ const CallLogs: React.FC = () => {
 
                             {selectedCall.transcript && (
                                 <div>
-                                    <p className="text-xs text-gray-500 mb-2">Transcript</p>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs text-gray-500">Transcript</p>
+                                        <button
+                                            onClick={() => downloadTranscript(selectedCall)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-400 hover:text-green-300 border border-green-500/30 rounded-lg hover:bg-green-500/10 transition-colors"
+                                        >
+                                            <Download size={14} />
+                                            Télécharger
+                                        </button>
+                                    </div>
                                     <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1f1f1f]">
                                         <p className="text-sm text-gray-300 whitespace-pre-wrap">{selectedCall.transcript}</p>
                                     </div>
