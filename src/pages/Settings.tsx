@@ -193,7 +193,7 @@ const Settings: React.FC = () => {
       setSettings(s);
       if (s.opening_hours && Object.keys(s.opening_hours).length > 0) setHours(s.opening_hours);
       if (s.services && Object.keys(s.services).length > 0) setServices(s.services);
-      if (s.total_capacity) setTotalCapacity(s.total_capacity);
+      if (s.capacity) setTotalCapacity(s.capacity);
       if (s.table_count) setTableCount(s.table_count);
       setConfirmationEmail(s.confirmation_email || s.email || '');
     } catch (error) {
@@ -504,7 +504,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
           <SaveButton loading={savingSection === 'capacity'} onClick={() => saveSection('capacity', {
-            total_capacity: totalCapacity, table_count: tableCount, services,
+            capacity: totalCapacity, table_count: tableCount, services,
             max_party_size: settings.max_party_size ? parseInt(settings.max_party_size) : undefined,
             advance_booking_days: settings.advance_booking_days ? parseInt(settings.advance_booking_days) : undefined,
           })} />
