@@ -5,7 +5,7 @@ import { LogIn, AlertCircle, Sun, Moon } from 'lucide-react';
 
 const t = {
     fr: {
-        tagline: 'Votre Hotesse de Restaurant 24/7',
+        tagline: 'Votre Hôtesse de Restaurant 24/7',
         welcomeBack: 'Bon retour',
         email: 'Email',
         password: 'Mot de passe',
