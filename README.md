@@ -1,73 +1,69 @@
-# React + TypeScript + Vite
+# TableNow — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+TableNow is a reservation platform paired with an AI phone hostess that takes calls 24/7 for restaurants. Customers call, the AI agent answers in natural language, books the table, and the reservation appears instantly in the restaurant's dashboard.
 
-Currently, two official plugins are available:
+This repository contains the **frontend** (React + TypeScript + Vite). It powers two surfaces:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- The marketing site at `tablenow.io` (landing, sign-up, login)
+- The restaurant app at `app.tablenow.io` (dashboard, bookings, call logs, settings, onboarding)
 
-## React Compiler
+The voice agent and reservation API live in the `tablenowbackend` repository.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Stack
 
-## Expanding the ESLint configuration
+- React 18 + TypeScript
+- Vite 5 (dev server + build)
+- React Router 6
+- Tailwind CSS
+- Supabase JS client (auth)
+- Vapi web SDK (voice agent demo)
+- Recharts (dashboard charts)
+- Axios (API client)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Prerequisites: Node 18+ and npm.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+cp .env.example .env   # then fill in your local values
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The dev server runs on http://localhost:5173.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Environment variables
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Configured via `.env` (see `.env.example`):
+
+| Variable        | Purpose                                            |
+| --------------- | -------------------------------------------------- |
+| `VITE_API_URL`  | Base URL of the TableNow backend API.              |
+
+Production points to `https://api.tablenow.io`. For local development against a local backend, set it to `http://localhost:8000` (or whatever port your backend exposes).
+
+## Scripts
+
+| Command           | What it does                                |
+| ----------------- | ------------------------------------------- |
+| `npm run dev`     | Start the Vite dev server with HMR.         |
+| `npm run build`   | Type-check (`tsc`) then produce a `dist/`.  |
+| `npm run preview` | Serve the production build locally.         |
+| `npm run lint`    | Run ESLint on the project.                  |
+
+## Project layout
+
 ```
+src/
+  pages/        Route-level views (Landing, Login, Dashboard, Bookings, …)
+  components/   Shared UI (Layout, onboarding steps)
+  context/      React contexts (AuthContext)
+  lib/          API client, domain helpers
+  index.css     Tailwind entry + global styles
+```
+
+Routing is split by host in `src/App.tsx`: the marketing domain only exposes landing + auth, while the app domain exposes the authenticated restaurant dashboard under `/r/:restaurantSlug/*`.
+
+## Deployment
+
+The frontend is deployed on Vercel (`vercel.json` at the repo root). Pushes to `main` trigger a production deploy; pull requests get preview deploys automatically.
