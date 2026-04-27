@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "http://168.231.113.49:1000/api/$1"
+            "destination": "https://api.tablenow.io/api/$1"
         },
         {
             "source": "/assets/(.*)",
