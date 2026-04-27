@@ -1,10 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../lib/api';
+import { useTranslation } from 'react-i18next';
+import { authAPI, restaurantsAPI } from '../lib/api';
+import { isSupportedLanguage, SupportedLanguage } from '../i18n';
 
 interface User {
     id: string;
     email: string;
     name: string;
+    language?: 'fr' | 'en';
     [key: string]: any;
 }
 
@@ -15,6 +18,8 @@ interface AuthContextType {
     register: (data: any) => Promise<void>;
     logout: () => void;
     refreshUser: () => Promise<void>;
+    /** Met à jour la langue du restaurant côté backend ET côté i18n. */
+    setLanguage: (lang: SupportedLanguage) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,10 +27,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const { i18n } = useTranslation();
 
     useEffect(() => {
         checkAuth();
     }, []);
+
+    /** Aligne i18n sur la langue du restaurant après login/refresh. */
+    const syncLanguageFromUser = (u: User | null) => {
+        if (!u) return;
+        if (isSupportedLanguage(u.language) && u.language !== i18n.resolvedLanguage) {
+            i18n.changeLanguage(u.language);
+        }
+    };
 
     const checkAuth = async () => {
         const token = localStorage.getItem('token');
@@ -36,7 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         try {
             const response = await authAPI.getMe();
-            setUser(response.data.restaurant);
+            const u = response.data.restaurant;
+            setUser(u);
+            syncLanguageFromUser(u);
         } catch (error) {
             localStorage.removeItem('token');
         } finally {
@@ -47,7 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         const response = await authAPI.login({ email, password });
         localStorage.setItem('token', response.data.token);
-        setUser(response.data.restaurant);
+        const u = response.data.restaurant;
+        setUser(u);
+        syncLanguageFromUser(u);
     };
 
     const register = async (data: any) => {
@@ -62,11 +80,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const refreshUser = async () => {
         const response = await authAPI.getMe();
-        setUser(response.data.restaurant);
+        const u = response.data.restaurant;
+        setUser(u);
+        syncLanguageFromUser(u);
+    };
+
+    const setLanguage = async (lang: SupportedLanguage) => {
+        // Met à jour i18n immédiatement pour un feedback instantané.
+        await i18n.changeLanguage(lang);
+        if (user) {
+            try {
+                await restaurantsAPI.setLanguage(lang);
+                setUser({ ...user, language: lang });
+            } catch (err) {
+                // Échec backend : on garde le changement côté UI (localStorage déjà persisté
+                // par i18next-browser-languagedetector). Logger pour diagnostic.
+                console.warn('Failed to sync language with backend:', err);
+            }
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+        <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser, setLanguage }}>
             {children}
         </AuthContext.Provider>
     );

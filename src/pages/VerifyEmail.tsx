@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../lib/api';
 import { CheckCircle, XCircle, Loader } from 'lucide-react';
 
@@ -7,10 +8,12 @@ const VerifyEmail: React.FC = () => {
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
     useEffect(() => {
         verifyEmail();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const verifyEmail = async () => {
@@ -18,7 +21,7 @@ const VerifyEmail: React.FC = () => {
 
         if (!token) {
             setStatus('error');
-            setMessage('Invalid verification link');
+            setMessage(t('auth.verify.invalidLink'));
             return;
         }
 
@@ -26,11 +29,10 @@ const VerifyEmail: React.FC = () => {
             const response = await authAPI.verifyEmail(token);
             setStatus('success');
             setMessage(response.data.message);
-            // Immediate redirect to login after success
             setTimeout(() => navigate('/login'), 2000);
         } catch (error: any) {
             setStatus('error');
-            setMessage(error.response?.data?.error || 'Verification failed');
+            setMessage(error.response?.data?.error || t('auth.verify.verificationFailed'));
         }
     };
 
@@ -60,16 +62,16 @@ const VerifyEmail: React.FC = () => {
                     </div>
 
                     <h2 className="text-2xl font-bold mb-4">
-                        {status === 'loading' && 'Verifying Email...'}
-                        {status === 'success' && 'Email Verified!'}
-                        {status === 'error' && 'Verification Failed'}
+                        {status === 'loading' && t('auth.verify.loadingTitle')}
+                        {status === 'success' && t('auth.verify.successTitle')}
+                        {status === 'error'   && t('auth.verify.errorTitle')}
                     </h2>
 
                     <p className="text-gray-700 mb-4">{message}</p>
 
                     {status === 'success' && (
                         <p className="text-sm text-gray-600">
-                            Redirecting to login...
+                            {t('auth.verify.redirectLogin')}
                         </p>
                     )}
 
@@ -78,7 +80,7 @@ const VerifyEmail: React.FC = () => {
                             onClick={() => navigate('/login')}
                             className="btn btn-primary"
                         >
-                            Go to Login
+                            {t('auth.verify.goLogin')}
                         </button>
                     )}
                 </div>

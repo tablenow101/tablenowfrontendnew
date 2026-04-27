@@ -66,4 +66,10 @@ export const emailAPI = {
     getBCCEmails: (params?: any) => api.get('/email/bcc', { params }),
 };
 
+export const restaurantsAPI = {
+    /** Met à jour la langue préférée du restaurant (FR/EN). */
+    setLanguage: (language: 'fr' | 'en') =>
+        api.patch('/restaurants/me/language', { language }),
+};
+
 export default api;

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { settingsAPI } from '../lib/api';
+import LanguageToggle from '../components/LanguageToggle';
 import {
     Store, Clock, Mail, ClipboardList,
     ChevronRight, ChevronLeft, Save, Copy, Check, Rocket,
@@ -9,22 +11,7 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DAYS = [
-    { key: 'monday',    label: 'Lundi'    },
-    { key: 'tuesday',   label: 'Mardi'    },
-    { key: 'wednesday', label: 'Mercredi' },
-    { key: 'thursday',  label: 'Jeudi'    },
-    { key: 'friday',    label: 'Vendredi' },
-    { key: 'saturday',  label: 'Samedi'   },
-    { key: 'sunday',    label: 'Dimanche' },
-] as const;
-
-const STEPS = [
-    { icon: Store,         label: 'Restaurant'    },
-    { icon: Clock,         label: 'Horaires'      },
-    { icon: Mail,          label: 'Email'         },
-    { icon: ClipboardList, label: 'Récapitulatif' },
-];
+const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
 const DEFAULT_HOURS: Record<string, { open: boolean; from: string; to: string }> = {
     monday:    { open: true,  from: '12:00', to: '22:30' },
@@ -71,12 +58,20 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 const Onboarding: React.FC = () => {
     const { user, refreshUser } = useAuth();
+    const { t } = useTranslation();
     const navigate   = useNavigate();
     const [step, setStep]       = useState(0);
     const [saving, setSaving]   = useState(false);
     const [loading, setLoading] = useState(true);
     const [copied, setCopied]   = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+
+    const STEPS = [
+        { icon: Store,         label: t('onboarding.stepRestaurant') },
+        { icon: Clock,         label: t('onboarding.stepHours')      },
+        { icon: Mail,          label: t('onboarding.stepEmail')      },
+        { icon: ClipboardList, label: t('onboarding.stepRecap')      },
+    ];
 
     const [info, setInfo] = useState({ name: '', address: '', phone: '', cuisine_type: '' });
     const [hours, setHours] = useState<Record<string, { open: boolean; from: string; to: string }>>(DEFAULT_HOURS);
@@ -107,7 +102,7 @@ const Onboarding: React.FC = () => {
             await settingsAPI.update(data);
             await refreshUser();
         } catch {
-            setSaveError('Erreur lors de la sauvegarde. Veuillez réessayer.');
+            setSaveError(t('common.saveError'));
         }
         setSaving(false);
     }
@@ -139,10 +134,13 @@ const Onboarding: React.FC = () => {
         <div className="min-h-screen bg-[#080912] flex flex-col items-center justify-center py-8 px-4">
             <div className="w-full max-w-xl">
 
-                {/* Header */}
+                {/* Header avec toggle langue */}
+                <div className="flex justify-end mb-4">
+                    <LanguageToggle />
+                </div>
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white tracking-tight">TableNow</h1>
-                    <p className="text-sm text-[#555] mt-1">Configuration de votre restaurant</p>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">{t('common.appName')}</h1>
+                    <p className="text-sm text-[#555] mt-1">{t('onboarding.title')}</p>
                 </div>
 
                 {/* Stepper */}
@@ -185,24 +183,24 @@ const Onboarding: React.FC = () => {
                             <div className="space-y-4">
                                 <h2 className="flex items-center gap-2 text-base font-semibold text-white mb-5">
                                     <Store size={18} className="text-green-400 flex-shrink-0" />
-                                    Informations du restaurant
+                                    {t('onboarding.restaurantInfo')}
                                 </h2>
                                 <div>
-                                    <FieldLabel>Nom du restaurant *</FieldLabel>
-                                    <input className={inputCls} value={info.name} onChange={e => setInfo({ ...info, name: e.target.value })} placeholder="Le Petit Bistrot" />
+                                    <FieldLabel>{t('onboarding.restaurantName')}</FieldLabel>
+                                    <input className={inputCls} value={info.name} onChange={e => setInfo({ ...info, name: e.target.value })} placeholder={t('onboarding.phRestaurantName')} />
                                 </div>
                                 <div>
-                                    <FieldLabel>Adresse</FieldLabel>
-                                    <input className={inputCls} value={info.address} onChange={e => setInfo({ ...info, address: e.target.value })} placeholder="123 Rue Principale, 75001 Paris" />
+                                    <FieldLabel>{t('onboarding.address')}</FieldLabel>
+                                    <input className={inputCls} value={info.address} onChange={e => setInfo({ ...info, address: e.target.value })} placeholder={t('onboarding.phAddress')} />
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <FieldLabel>Téléphone</FieldLabel>
-                                        <input className={inputCls} type="tel" value={info.phone} onChange={e => setInfo({ ...info, phone: e.target.value })} placeholder="+33 1 23 45 67 89" />
+                                        <FieldLabel>{t('onboarding.phone')}</FieldLabel>
+                                        <input className={inputCls} type="tel" value={info.phone} onChange={e => setInfo({ ...info, phone: e.target.value })} placeholder={t('onboarding.phPhone')} />
                                     </div>
                                     <div>
-                                        <FieldLabel>Type de cuisine</FieldLabel>
-                                        <input className={inputCls} value={info.cuisine_type} onChange={e => setInfo({ ...info, cuisine_type: e.target.value })} placeholder="Française..." />
+                                        <FieldLabel>{t('onboarding.cuisineType')}</FieldLabel>
+                                        <input className={inputCls} value={info.cuisine_type} onChange={e => setInfo({ ...info, cuisine_type: e.target.value })} placeholder={t('onboarding.phCuisine')} />
                                     </div>
                                 </div>
                             </div>
@@ -214,31 +212,31 @@ const Onboarding: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                     <h2 className="flex items-center gap-2 text-base font-semibold text-white">
                                         <Clock size={18} className="text-green-400 flex-shrink-0" />
-                                        Horaires & Services
+                                        {t('onboarding.scheduleAndServices')}
                                     </h2>
                                     <div className="flex items-center gap-2 text-sm">
-                                        <span className="text-[#666] text-xs">Capacité totale</span>
+                                        <span className="text-[#666] text-xs">{t('onboarding.totalCapacity')}</span>
                                         <input
                                             type="number" min={1}
                                             className="w-16 h-8 px-2 text-center rounded-lg text-sm bg-[#0d0d1a] border border-[#252535] text-white focus:outline-none focus:border-green-500/60"
                                             value={totalCapacity}
                                             onChange={e => setTotalCapacity(parseInt(e.target.value) || 0)}
                                         />
-                                        <span className="text-[#666] text-xs">cvts</span>
+                                        <span className="text-[#666] text-xs">{t('onboarding.covers')}</span>
                                     </div>
                                 </div>
 
                                 {/* Jours d'ouverture */}
                                 <div>
-                                    <p className="text-[10px] font-bold text-[#555] uppercase tracking-widest mb-3">Jours d'ouverture</p>
+                                    <p className="text-[10px] font-bold text-[#555] uppercase tracking-widest mb-3">{t('onboarding.openingDays')}</p>
                                     <div className="space-y-2">
-                                        {DAYS.map(({ key, label }) => {
+                                        {DAY_KEYS.map((key) => {
                                             const day = hours[key] || { open: false, from: '12:00', to: '22:00' };
                                             return (
                                                 <div key={key} className="flex items-center gap-3">
                                                     <Toggle on={day.open} onToggle={() => setHours({ ...hours, [key]: { ...day, open: !day.open } })} />
                                                     <span className={`text-sm font-medium w-24 flex-shrink-0 ${day.open ? 'text-white' : 'text-[#444]'}`}>
-                                                        {label}
+                                                        {t(`days.${key}`)}
                                                     </span>
                                                     {day.open ? (
                                                         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -249,7 +247,7 @@ const Onboarding: React.FC = () => {
                                                                 onChange={e => setHours({ ...hours, [key]: { ...day, to: e.target.value } })} />
                                                         </div>
                                                     ) : (
-                                                        <span className="text-xs text-[#444] italic">Fermé</span>
+                                                        <span className="text-xs text-[#444] italic">{t('onboarding.closed')}</span>
                                                     )}
                                                 </div>
                                             );
@@ -261,29 +259,29 @@ const Onboarding: React.FC = () => {
 
                                 {/* Services */}
                                 <div>
-                                    <p className="text-[10px] font-bold text-[#555] uppercase tracking-widest mb-3">Services & couverts</p>
+                                    <p className="text-[10px] font-bold text-[#555] uppercase tracking-widest mb-3">{t('onboarding.servicesAndCovers')}</p>
                                     <div className="space-y-3">
 
-                                        {/* Déjeuner */}
+                                        {/* Lunch */}
                                         <div className="rounded-xl bg-[#0a0a16] border border-white/8 p-4 space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <Toggle on={services.lunch.active} onToggle={() => setServices({ ...services, lunch: { ...services.lunch, active: !services.lunch.active } })} />
-                                                <span className="text-sm font-semibold text-white">Déjeuner</span>
+                                                <span className="text-sm font-semibold text-white">{t('onboarding.lunch')}</span>
                                             </div>
                                             {services.lunch.active && (
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <div>
-                                                        <FieldLabel>De</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.from')}</FieldLabel>
                                                         <input type="time" className={`${timeCls} w-full`} value={services.lunch.from}
                                                             onChange={e => setServices({ ...services, lunch: { ...services.lunch, from: e.target.value } })} />
                                                     </div>
                                                     <div>
-                                                        <FieldLabel>À</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.to')}</FieldLabel>
                                                         <input type="time" className={`${timeCls} w-full`} value={services.lunch.to}
                                                             onChange={e => setServices({ ...services, lunch: { ...services.lunch, to: e.target.value } })} />
                                                     </div>
                                                     <div>
-                                                        <FieldLabel>Couverts max</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.maxCovers')}</FieldLabel>
                                                         <input type="number" min={1} className={`${timeCls} w-full text-center`} value={services.lunch.capacity}
                                                             onChange={e => setServices({ ...services, lunch: { ...services.lunch, capacity: parseInt(e.target.value) || 0 } })} />
                                                     </div>
@@ -291,26 +289,26 @@ const Onboarding: React.FC = () => {
                                             )}
                                         </div>
 
-                                        {/* Dîner */}
+                                        {/* Dinner */}
                                         <div className="rounded-xl bg-[#0a0a16] border border-white/8 p-4 space-y-3">
                                             <div className="flex items-center gap-3">
                                                 <Toggle on={services.dinner.active} onToggle={() => setServices({ ...services, dinner: { ...services.dinner, active: !services.dinner.active } })} />
-                                                <span className="text-sm font-semibold text-white">Dîner</span>
+                                                <span className="text-sm font-semibold text-white">{t('onboarding.dinner')}</span>
                                             </div>
                                             {services.dinner.active && (
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <div>
-                                                        <FieldLabel>De</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.from')}</FieldLabel>
                                                         <input type="time" className={`${timeCls} w-full`} value={services.dinner.from}
                                                             onChange={e => setServices({ ...services, dinner: { ...services.dinner, from: e.target.value } })} />
                                                     </div>
                                                     <div>
-                                                        <FieldLabel>À</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.to')}</FieldLabel>
                                                         <input type="time" className={`${timeCls} w-full`} value={services.dinner.to}
                                                             onChange={e => setServices({ ...services, dinner: { ...services.dinner, to: e.target.value } })} />
                                                     </div>
                                                     <div>
-                                                        <FieldLabel>Couverts max</FieldLabel>
+                                                        <FieldLabel>{t('onboarding.maxCovers')}</FieldLabel>
                                                         <input type="number" min={1} className={`${timeCls} w-full text-center`} value={services.dinner.capacity}
                                                             onChange={e => setServices({ ...services, dinner: { ...services.dinner, capacity: parseInt(e.target.value) || 0 } })} />
                                                     </div>
@@ -327,18 +325,18 @@ const Onboarding: React.FC = () => {
                             <div className="space-y-5">
                                 <h2 className="flex items-center gap-2 text-base font-semibold text-white mb-5">
                                     <Mail size={18} className="text-green-400 flex-shrink-0" />
-                                    Email de confirmation
+                                    {t('onboarding.confirmationEmail')}
                                 </h2>
                                 <div>
-                                    <FieldLabel>Email pour recevoir les réservations *</FieldLabel>
+                                    <FieldLabel>{t('onboarding.emailReceiveBookings')}</FieldLabel>
                                     <input type="email" className={inputCls} value={confirmationEmail}
                                         onChange={e => setConfirmationEmail(e.target.value)}
-                                        placeholder="reservations@votre-restaurant.fr" />
-                                    <p className="text-xs text-[#555] mt-1.5">Les confirmations seront envoyées à cette adresse.</p>
+                                        placeholder={t('onboarding.phEmail')} />
+                                    <p className="text-xs text-[#555] mt-1.5">{t('onboarding.emailHelper')}</p>
                                 </div>
                                 {user?.bcc_email && (
                                     <div className="rounded-xl bg-[#0a0a16] border border-white/8 p-4 space-y-2">
-                                        <FieldLabel>Adresse BCC (lecture seule)</FieldLabel>
+                                        <FieldLabel>{t('onboarding.bccLabel')}</FieldLabel>
                                         <div className="flex items-center gap-2">
                                             <input type="text" readOnly value={user.bcc_email}
                                                 className="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl text-xs bg-[#080912] border border-[#1a1a2a] text-[#888] font-mono focus:outline-none truncate" />
@@ -347,7 +345,7 @@ const Onboarding: React.FC = () => {
                                                 {copied ? <Check size={15} className="text-green-400" /> : <Copy size={15} className="text-[#888]" />}
                                             </button>
                                         </div>
-                                        <p className="text-xs text-[#555]">Ajoutez cette adresse en BCC dans Zenchef / SevenRooms.</p>
+                                        <p className="text-xs text-[#555]">{t('onboarding.bccHelper')}</p>
                                     </div>
                                 )}
                             </div>
@@ -358,45 +356,45 @@ const Onboarding: React.FC = () => {
                             <div className="space-y-4">
                                 <h2 className="flex items-center gap-2 text-base font-semibold text-white mb-1">
                                     <ClipboardList size={18} className="text-green-400 flex-shrink-0" />
-                                    Récapitulatif
+                                    {t('onboarding.recap')}
                                 </h2>
-                                <p className="text-sm text-[#666]">Tout a été sauvegardé — modifiez à tout moment dans les réglages.</p>
+                                <p className="text-sm text-[#666]">{t('onboarding.recapHelper')}</p>
 
                                 <div className="space-y-2">
-                                    <RecapBlock title="Restaurant">
-                                        <RecapRow label="Nom"       value={info.name         || '—'} />
-                                        <RecapRow label="Adresse"   value={info.address      || '—'} />
-                                        <RecapRow label="Téléphone" value={info.phone        || '—'} />
-                                        <RecapRow label="Cuisine"   value={info.cuisine_type || '—'} />
+                                    <RecapBlock title={t('onboarding.restaurantSection')}>
+                                        <RecapRow label={t('onboarding.name')}        value={info.name         || '—'} />
+                                        <RecapRow label={t('onboarding.address')}     value={info.address      || '—'} />
+                                        <RecapRow label={t('onboarding.phone')}       value={info.phone        || '—'} />
+                                        <RecapRow label={t('onboarding.cuisineType')} value={info.cuisine_type || '—'} />
                                     </RecapBlock>
 
-                                    <RecapBlock title={`Horaires — ${totalCapacity} couverts total`}>
-                                        {DAYS.map(({ key, label }) => {
+                                    <RecapBlock title={`${t('onboarding.schedule')} — ${totalCapacity} ${t('onboarding.totalCoversSuffix')}`}>
+                                        {DAY_KEYS.map((key) => {
                                             const day = hours[key];
                                             return (
-                                                <RecapRow key={key} label={label}
+                                                <RecapRow key={key} label={t(`days.${key}`)}
                                                     value={day?.open
                                                         ? `${day.from} → ${day.to}`
-                                                        : <span className="italic text-[#555]">Fermé</span>}
+                                                        : <span className="italic text-[#555]">{t('onboarding.closed')}</span>}
                                                 />
                                             );
                                         })}
                                     </RecapBlock>
 
-                                    <RecapBlock title="Services">
-                                        <RecapRow label="Déjeuner" value={services.lunch.active
-                                            ? `${services.lunch.from} → ${services.lunch.to} · ${services.lunch.capacity} cvts`
-                                            : <span className="italic text-[#555]">Désactivé</span>}
+                                    <RecapBlock title={t('onboarding.services')}>
+                                        <RecapRow label={t('onboarding.lunch')} value={services.lunch.active
+                                            ? `${services.lunch.from} → ${services.lunch.to} · ${services.lunch.capacity} ${t('onboarding.covers')}`
+                                            : <span className="italic text-[#555]">{t('onboarding.deactivated')}</span>}
                                         />
-                                        <RecapRow label="Dîner" value={services.dinner.active
-                                            ? `${services.dinner.from} → ${services.dinner.to} · ${services.dinner.capacity} cvts`
-                                            : <span className="italic text-[#555]">Désactivé</span>}
+                                        <RecapRow label={t('onboarding.dinner')} value={services.dinner.active
+                                            ? `${services.dinner.from} → ${services.dinner.to} · ${services.dinner.capacity} ${t('onboarding.covers')}`
+                                            : <span className="italic text-[#555]">{t('onboarding.deactivated')}</span>}
                                         />
                                     </RecapBlock>
 
-                                    <RecapBlock title="Notifications">
-                                        <RecapRow label="Email" value={confirmationEmail || '—'} />
-                                        {user?.bcc_email && <RecapRow label="BCC" value={<span className="font-mono text-xs break-all">{user.bcc_email}</span>} />}
+                                    <RecapBlock title={t('onboarding.notifications')}>
+                                        <RecapRow label={t('onboarding.email')} value={confirmationEmail || '—'} />
+                                        {user?.bcc_email && <RecapRow label={t('onboarding.bcc')} value={<span className="font-mono text-xs break-all">{user.bcc_email}</span>} />}
                                     </RecapBlock>
                                 </div>
 
@@ -404,7 +402,7 @@ const Onboarding: React.FC = () => {
                                     onClick={() => navigate(`/r/${user?.slug || user?.id}/dashboard`)}
                                     className="w-full h-14 mt-2 rounded-xl bg-white text-black font-semibold text-base flex items-center justify-center gap-2 hover:bg-gray-100 transition-colors"
                                 >
-                                    <Rocket size={20} /> Lancer mon assistant
+                                    <Rocket size={20} /> {t('onboarding.launchAssistant')}
                                 </button>
                             </div>
                         )}
@@ -418,7 +416,7 @@ const Onboarding: React.FC = () => {
                                 onClick={() => setStep(s => s - 1)}
                                 className={`h-11 px-5 rounded-xl border border-white/10 text-sm font-medium text-white flex items-center gap-1.5 hover:bg-white/5 transition-colors ${step === 0 ? 'invisible pointer-events-none' : ''}`}
                             >
-                                <ChevronLeft size={16} /> Précédent
+                                <ChevronLeft size={16} /> {t('common.previous')}
                             </button>
                             <button
                                 type="button"
@@ -427,11 +425,11 @@ const Onboarding: React.FC = () => {
                                 className="h-11 px-8 rounded-xl bg-white text-black text-sm font-semibold flex items-center gap-2 hover:bg-gray-100 disabled:opacity-50 transition-colors"
                             >
                                 {saving ? (
-                                    <><span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin inline-block" /> Sauvegarde...</>
+                                    <><span className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin inline-block" /> {t('common.saving')}</>
                                 ) : step === 2 ? (
-                                    <><Save size={15} /> Terminer</>
+                                    <><Save size={15} /> {t('common.finish')}</>
                                 ) : (
-                                    <>Suivant <ChevronRight size={16} /></>
+                                    <>{t('common.next')} <ChevronRight size={16} /></>
                                 )}
                             </button>
                         </div>

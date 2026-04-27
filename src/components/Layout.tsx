@@ -1,6 +1,8 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageToggle from './LanguageToggle';
 import {
     LayoutDashboard,
     Calendar,
@@ -13,6 +15,7 @@ import {
 
 const Layout: React.FC = () => {
     const { user, logout } = useAuth();
+    const { t } = useTranslation();
     const location = useLocation();
     const { restaurantSlug } = useParams();
     const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
@@ -20,10 +23,10 @@ const Layout: React.FC = () => {
     const base = `/r/${restaurantSlug}`;
 
     const navigation = [
-        { name: 'Dashboard',    href: `${base}/dashboard`, icon: LayoutDashboard },
-        { name: 'Réservations', href: `${base}/bookings`,  icon: Calendar },
-        { name: 'Appels',       href: `${base}/calls`,     icon: Phone },
-        { name: 'Paramètres',   href: `${base}/settings`,  icon: Settings },
+        { name: t('nav.dashboard'), href: `${base}/dashboard`, icon: LayoutDashboard },
+        { name: t('nav.bookings'),  href: `${base}/bookings`,  icon: Calendar },
+        { name: t('nav.calls'),     href: `${base}/calls`,     icon: Phone },
+        { name: t('nav.settings'),  href: `${base}/settings`,  icon: Settings },
     ];
 
     const isActive = (path: string) => location.pathname === path;
@@ -64,17 +67,19 @@ const Layout: React.FC = () => {
                                     </Link>
                                 );
                             })}
+                            <div className="ml-2"><LanguageToggle /></div>
                             <button
                                 onClick={logout}
                                 className="flex items-center space-x-2 px-3 py-2 rounded-xl text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 ml-2"
                             >
                                 <LogOut size={16} />
-                                <span>Déconnexion</span>
+                                <span>{t('common.logout')}</span>
                             </button>
                         </div>
 
                         {/* Mobile menu button */}
-                        <div className="md:hidden flex items-center">
+                        <div className="md:hidden flex items-center gap-2">
+                            <LanguageToggle />
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-[#1a1a1a]"
@@ -112,7 +117,7 @@ const Layout: React.FC = () => {
                                 className="w-full flex items-center space-x-2 px-3 py-2.5 rounded-xl text-sm text-gray-500 hover:text-red-400 hover:bg-red-500/10"
                             >
                                 <LogOut size={16} />
-                                <span>Déconnexion</span>
+                                <span>{t('common.logout')}</span>
                             </button>
                         </div>
                     </div>

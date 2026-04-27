@@ -1,38 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import LanguageToggle from '../components/LanguageToggle';
 import { LogIn, AlertCircle, Sun, Moon } from 'lucide-react';
-
-const t = {
-    fr: {
-        tagline: 'Votre Hôtesse de Restaurant 24/7',
-        welcomeBack: 'Ravi de vous revoir',
-        email: 'Email',
-        password: 'Mot de passe',
-        loggingIn: 'Connexion...',
-        loginBtn: 'Se connecter',
-        noAccount: "Vous n'avez pas de compte ?",
-        registerHere: "S'inscrire ici",
-        loginFailed: 'Connexion échouée. Veuillez réessayer.',
-    },
-    en: {
-        tagline: 'Your Restaurant Hostess 24/7',
-        welcomeBack: 'Welcome back',
-        email: 'Email',
-        password: 'Password',
-        loggingIn: 'Logging in...',
-        loginBtn: 'Login',
-        noAccount: "Don't have an account?",
-        registerHere: 'Register here',
-        loginFailed: 'Login failed. Please try again.',
-    },
-};
-
-function getInitialLang(): 'fr' | 'en' {
-    const stored = localStorage.getItem('tn_lang');
-    if (stored === 'fr' || stored === 'en') return stored;
-    return navigator.language.startsWith('fr') ? 'fr' : 'en';
-}
 
 function getInitialTheme(): 'light' | 'dark' {
     const stored = localStorage.getItem('tn_theme');
@@ -46,20 +17,15 @@ const Login: React.FC = () => {
     const [error, setError]       = useState('');
     const [loading, setLoading]   = useState(false);
     const { login } = useAuth();
+    const { t } = useTranslation();
     const navigate = useNavigate();
 
-    const [lang, setLang]   = useState<'fr' | 'en'>(getInitialLang);
     const [theme, setTheme] = useState<'light' | 'dark'>(getInitialTheme);
-    const s = t[lang];
 
     useEffect(() => {
         document.documentElement.classList.toggle('dark', theme === 'dark');
         localStorage.setItem('tn_theme', theme);
     }, [theme]);
-
-    useEffect(() => {
-        localStorage.setItem('tn_lang', lang);
-    }, [lang]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -69,7 +35,7 @@ const Login: React.FC = () => {
             await login(email, password);
             navigate('/');
         } catch (err: any) {
-            setError(err.response?.data?.error || s.loginFailed);
+            setError(err.response?.data?.error || t('auth.login.failed'));
         } finally {
             setLoading(false);
         }
@@ -83,17 +49,12 @@ const Login: React.FC = () => {
 
                 {/* Toggles */}
                 <div className="flex justify-end gap-2 mb-6">
-                    <button
-                        onClick={() => setLang(l => l === 'fr' ? 'en' : 'fr')}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors"
-                        style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'var(--text-primary)', background: 'transparent' }}
-                    >
-                        {lang === 'fr' ? 'EN' : 'FR'}
-                    </button>
+                    <LanguageToggle variant="light" />
                     <button
                         onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
                         className="p-1.5 rounded-full border transition-colors"
                         style={{ borderColor: 'rgba(255,255,255,0.2)', color: 'var(--text-primary)', background: 'transparent' }}
+                        aria-label="Toggle theme"
                     >
                         {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                     </button>
@@ -101,8 +62,8 @@ const Login: React.FC = () => {
 
                 {/* Header */}
                 <div className="text-center mb-8">
-                    <h1 className="text-5xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>TableNow</h1>
-                    <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>{s.tagline}</p>
+                    <h1 className="text-5xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>{t('common.appName')}</h1>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>{t('common.tagline')}</p>
                 </div>
 
                 {/* Card */}
@@ -117,7 +78,7 @@ const Login: React.FC = () => {
                     </div>
 
                     <h2 className="text-3xl font-bold text-center mb-8" style={{ color: 'var(--text-primary)' }}>
-                        {s.welcomeBack}
+                        {t('auth.login.welcomeBack')}
                     </h2>
 
                     {/* Error */}
@@ -132,7 +93,7 @@ const Login: React.FC = () => {
                     <form onSubmit={handleSubmit} className="space-y-5">
                         <div>
                             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                {s.email}
+                                {t('auth.login.email')}
                             </label>
                             <input
                                 type="email"
@@ -155,7 +116,7 @@ const Login: React.FC = () => {
 
                         <div>
                             <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-tertiary)' }}>
-                                {s.password}
+                                {t('auth.login.password')}
                             </label>
                             <input
                                 type="password"
@@ -190,16 +151,16 @@ const Login: React.FC = () => {
                             {loading ? (
                                 <>
                                     <span className="w-4 h-4 border-2 border-current/20 border-t-current rounded-full animate-spin" />
-                                    {s.loggingIn}
+                                    {t('auth.login.submitting')}
                                 </>
-                            ) : s.loginBtn}
+                            ) : t('auth.login.submit')}
                         </button>
                     </form>
 
                     <p className="mt-6 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {s.noAccount}{' '}
+                        {t('auth.login.noAccount')}{' '}
                         <Link to="/register" className="font-semibold hover:underline" style={{ color: 'var(--text-primary)' }}>
-                            {s.registerHere}
+                            {t('auth.login.registerHere')}
                         </Link>
                     </p>
                 </div>

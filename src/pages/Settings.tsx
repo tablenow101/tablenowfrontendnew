@@ -1,20 +1,14 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { settingsAPI, calendarAPI } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import LanguageToggle from '../components/LanguageToggle';
 import {
   Phone, Mail, User, Globe, Copy, Check,
   Calendar, Bell, Info, AlertCircle, CheckCircle, Wifi, WifiOff, Utensils,
 } from 'lucide-react';
 
-const DAYS = [
-  { key: 'monday',    label: 'Lundi'    },
-  { key: 'tuesday',   label: 'Mardi'    },
-  { key: 'wednesday', label: 'Mercredi' },
-  { key: 'thursday',  label: 'Jeudi'    },
-  { key: 'friday',    label: 'Vendredi' },
-  { key: 'saturday',  label: 'Samedi'   },
-  { key: 'sunday',    label: 'Dimanche' },
-] as const;
+const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
 const DEFAULT_HOURS: Record<string, { open: boolean; from: string; to: string }> = {
   monday:    { open: true,  from: '12:00', to: '22:30' },
@@ -119,7 +113,7 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
-function SaveButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+function SaveButton({ loading, onClick, label, savingLabel }: { loading: boolean; onClick: () => void; label: string; savingLabel: string }) {
   return (
     <div className="flex justify-end pt-4 border-t border-[#1a1a1a] mt-4">
       <button
@@ -127,7 +121,7 @@ function SaveButton({ loading, onClick }: { loading: boolean; onClick: () => voi
         disabled={loading}
         className="px-5 py-2 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black text-sm font-semibold transition-colors"
       >
-        {loading ? 'Enregistrement...' : 'Sauvegarder'}
+        {loading ? savingLabel : label}
       </button>
     </div>
   );
@@ -155,6 +149,7 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 const Settings: React.FC = () => {
   const { user, refreshUser } = useAuth();
+  const { t } = useTranslation();
   const [settings, setSettings]   = useState<any>({});
   const [hours, setHours]         = useState<Record<string, { open: boolean; from: string; to: string }>>(DEFAULT_HOURS);
   const [services, setServices]   = useState(DEFAULT_SERVICES);
@@ -170,24 +165,25 @@ const Settings: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get('code');
     if (code) handleCalendarCallback(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (toast) {
-      const t = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(t);
+      const tm = setTimeout(() => setToast(null), 3000);
+      return () => clearTimeout(tm);
     }
   }, [toast]);
 
   const handleCalendarCallback = async (code: string) => {
     try {
-      setToast({ type: 'success', text: 'Connexion Google Calendar...' });
+      setToast({ type: 'success', text: t('settings.calendar.callbackInProgress') });
       await calendarAPI.callback(code);
       await refreshUser();
-      setToast({ type: 'success', text: 'Google Calendar connecté !' });
+      setToast({ type: 'success', text: t('settings.calendar.callbackSuccess') });
       window.history.replaceState({}, document.title, window.location.pathname);
     } catch {
-      setToast({ type: 'error', text: 'Erreur de connexion Google Calendar' });
+      setToast({ type: 'error', text: t('settings.calendar.connectError') });
     }
   };
 
@@ -202,7 +198,7 @@ const Settings: React.FC = () => {
       if (s.table_count) setTableCount(s.table_count);
       setConfirmationEmail(s.confirmation_email || s.email || '');
     } catch (err) {
-      console.error('Erreur chargement paramètres:', err);
+      console.error(t('settings.loadError'), err);
     } finally {
       setLoading(false);
     }
@@ -215,9 +211,9 @@ const Settings: React.FC = () => {
     try {
       await settingsAPI.update(data);
       await refreshUser();
-      showToast('Modifications enregistrées', 'success');
+      showToast(t('common.saved'), 'success');
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Erreur lors de la sauvegarde', 'error');
+      showToast(err.response?.data?.error || t('settings.saveError'), 'error');
     } finally {
       setSavingSection(null);
     }
@@ -230,31 +226,31 @@ const Settings: React.FC = () => {
       const response = await calendarAPI.getAuthUrl();
       window.open(response.data.authUrl, '_blank');
     } catch {
-      showToast('Erreur de connexion Google Calendar', 'error');
+      showToast(t('settings.calendar.connectError'), 'error');
     }
   };
 
   const disconnectCalendar = async () => {
-    if (!confirm('Déconnecter Google Calendar ?')) return;
+    if (!confirm(t('settings.calendar.disconnectPrompt'))) return;
     try {
       await calendarAPI.disconnect();
       await refreshUser();
-      showToast('Calendrier déconnecté', 'success');
+      showToast(t('settings.calendar.disconnected'), 'success');
     } catch {
-      showToast('Erreur lors de la déconnexion', 'error');
+      showToast(t('settings.calendar.disconnectError'), 'error');
     }
   };
 
   const retryVapiSetup = async () => {
-    if (!confirm('Configurer votre assistant IA téléphonique ?')) return;
+    if (!confirm(t('settings.vapi.retryPrompt'))) return;
     setSavingSection('vapi');
     try {
       const response = await settingsAPI.retryVapi();
       await refreshUser();
       await fetchSettings();
-      showToast(`Assistant IA configuré ! Téléphone: ${response.data.phoneNumber}`, 'success');
+      showToast(t('settings.vapi.retrySuccess', { phone: response.data.phoneNumber }), 'success');
     } catch (err: any) {
-      showToast(err.response?.data?.error || 'Erreur de configuration VAPI', 'error');
+      showToast(err.response?.data?.error || t('settings.vapi.retryError'), 'error');
     } finally {
       setSavingSection(null);
     }
@@ -268,34 +264,45 @@ const Settings: React.FC = () => {
     );
   }
 
+  const saveLabel = t('common.save');
+  const savingLabel = t('common.saving');
+
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white overflow-y-auto">
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-4">
 
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Paramètres</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Gérez la configuration de votre restaurant</p>
+          <h1 className="text-2xl font-bold text-white">{t('settings.title')}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{t('settings.subtitle')}</p>
         </div>
 
+        {/* 0. Langue de l'interface */}
+        <SectionCard title={t('settings.section.language')} description={t('settings.section.languageDesc')} icon={Globe}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">{t('common.languageLabel')}</span>
+            <LanguageToggle />
+          </div>
+        </SectionCard>
+
         {/* 1. Informations générales */}
-        <SectionCard title="Informations générales" icon={User}>
+        <SectionCard title={t('settings.section.general')} icon={User}>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Nom du restaurant">
+              <Field label={t('settings.fields.name')}>
                 <Input value={settings.name || ''} onChange={v => handleChange('name', v)} placeholder="Coco Paris" />
               </Field>
-              <Field label="Nom du propriétaire">
+              <Field label={t('settings.fields.ownerName')}>
                 <Input value={settings.owner_name || ''} onChange={v => handleChange('owner_name', v)} placeholder="Jean Dupont" />
               </Field>
             </div>
-            <Field label="Téléphone du restaurant" helper="Numéro affiché aux clients — différent du numéro IA">
+            <Field label={t('settings.fields.phone')} helper={t('settings.fields.phoneHelper')}>
               <Input value={settings.phone || ''} onChange={v => handleChange('phone', v)} placeholder="+33 1 42 00 00 00" type="tel" />
             </Field>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Type de cuisine">
+              <Field label={t('settings.fields.cuisine')}>
                 <Input value={settings.cuisine_type || ''} onChange={v => handleChange('cuisine_type', v)} placeholder="Française" />
               </Field>
-              <Field label="Adresse">
+              <Field label={t('settings.fields.address')}>
                 <Input value={settings.address || ''} onChange={v => handleChange('address', v)} placeholder="12 rue de Rivoli, Paris" />
               </Field>
             </div>
@@ -303,17 +310,17 @@ const Settings: React.FC = () => {
           <SaveButton loading={savingSection === 'general'} onClick={() => saveSection('general', {
             name: settings.name, owner_name: settings.owner_name, phone: settings.phone,
             cuisine_type: settings.cuisine_type, address: settings.address,
-          })} />
+          })} label={saveLabel} savingLabel={savingLabel} />
         </SectionCard>
 
         {/* 2. Assistant IA */}
         <SectionCard
-          title="Assistant IA"
-          description="Votre agent téléphonique alimenté par TableNow"
+          title={t('settings.section.ai')}
+          description={t('settings.section.aiDesc')}
           icon={Phone}
           badge={user?.vapi_assistant_id
-            ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">Actif</span>
-            : <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">Non configuré</span>
+            ? <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">{t('settings.ai.active')}</span>
+            : <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 font-medium">{t('settings.ai.notConfigured')}</span>
           }
         >
           <div className="space-y-3">
@@ -321,55 +328,55 @@ const Settings: React.FC = () => {
               <div className="flex items-center gap-4 p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a]">
                 <div className="p-2 rounded-xl bg-[#1a1a1a]"><Phone size={16} className="text-green-400" /></div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Numéro IA — reçoit les appels de vos clients</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{t('settings.fields.iaPhone')}</p>
                   <p className="text-base font-bold text-white font-mono">{user.vapi_phone_number}</p>
                 </div>
               </div>
             ) : (
               <button onClick={retryVapiSetup} disabled={savingSection === 'vapi'}
                 className="w-full px-5 py-3 rounded-xl bg-green-500 hover:bg-green-400 disabled:opacity-50 text-black text-sm font-semibold transition-colors">
-                {savingSection === 'vapi' ? 'Configuration en cours...' : "Configurer l'assistant IA"}
+                {savingSection === 'vapi' ? t('settings.ai.configuring') : t('settings.ai.configure')}
               </button>
             )}
             <p className="text-xs text-gray-600 flex items-center gap-1.5">
-              <Info size={11} /> Ce numéro est géré automatiquement par TableNow.
+              <Info size={11} /> {t('settings.fields.iaInfo')}
             </p>
           </div>
         </SectionCard>
 
         {/* 3. Google Calendar */}
-        <SectionCard title="Google Calendar" description="Créez automatiquement des événements pour chaque réservation" icon={Calendar}>
+        <SectionCard title={t('settings.section.calendar')} description={t('settings.section.calendarDesc')} icon={Calendar}>
           {user?.google_calendar_tokens ? (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-sm text-green-400"><Wifi size={15} /><span className="font-medium">Calendrier connecté</span></div>
+              <div className="flex items-center gap-2.5 text-sm text-green-400"><Wifi size={15} /><span className="font-medium">{t('settings.calendar.connected')}</span></div>
               <button onClick={disconnectCalendar} className="text-xs text-red-400 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 px-3 py-1.5 rounded-lg transition-colors">
-                Déconnecter
+                {t('settings.calendar.disconnect')}
               </button>
             </div>
           ) : (
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5 text-sm text-gray-500"><WifiOff size={15} /><span>Non connecté</span></div>
+              <div className="flex items-center gap-2.5 text-sm text-gray-500"><WifiOff size={15} /><span>{t('settings.calendar.notConnected')}</span></div>
               <button onClick={connectCalendar} className="text-xs text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg font-medium transition-colors">
-                Connecter Google Calendar
+                {t('settings.calendar.connect')}
               </button>
             </div>
           )}
         </SectionCard>
 
-        {/* 4. Horaires & Services (fusionnés) */}
-        <SectionCard title="Horaires & Services" icon={Utensils}>
+        {/* 4. Horaires & Services */}
+        <SectionCard title={t('settings.section.schedule')} icon={Utensils}>
           <div className="space-y-6">
 
             {/* Jours d'ouverture */}
             <div>
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Jours d'ouverture</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">{t('settings.fields.openingDays')}</p>
               <div className="space-y-2">
-                {DAYS.map(({ key, label }) => {
+                {DAY_KEYS.map((key) => {
                   const day = hours[key] ?? { open: false, from: '12:00', to: '22:00' };
                   return (
                     <div key={key} className="flex items-center gap-3">
                       <Toggle on={day.open} onToggle={() => setHours({ ...hours, [key]: { ...day, open: !day.open } })} />
-                      <span className={`text-sm font-medium w-24 flex-shrink-0 ${day.open ? 'text-white' : 'text-gray-600'}`}>{label}</span>
+                      <span className={`text-sm font-medium w-24 flex-shrink-0 ${day.open ? 'text-white' : 'text-gray-600'}`}>{t(`days.${key}`)}</span>
                       {day.open ? (
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <TimeInput value={day.from} onChange={v => setHours({ ...hours, [key]: { ...day, from: v } })} />
@@ -377,7 +384,7 @@ const Settings: React.FC = () => {
                           <TimeInput value={day.to} onChange={v => setHours({ ...hours, [key]: { ...day, to: v } })} />
                         </div>
                       ) : (
-                        <span className="text-xs text-gray-600 italic">Fermé</span>
+                        <span className="text-xs text-gray-600 italic">{t('settings.fields.closed')}</span>
                       )}
                     </div>
                   );
@@ -389,18 +396,18 @@ const Settings: React.FC = () => {
 
             {/* Capacité */}
             <div>
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Capacité</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">{t('settings.fields.capacity')}</p>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Capacité totale (couverts)">
+                <Field label={t('settings.fields.totalCovers')}>
                   <Input value={String(totalCapacity)} onChange={v => setTotalCapacity(parseInt(v) || 0)} type="number" />
                 </Field>
-                <Field label="Nombre de tables">
+                <Field label={t('settings.fields.tableCount')}>
                   <Input value={String(tableCount)} onChange={v => setTableCount(parseInt(v) || 0)} type="number" />
                 </Field>
-                <Field label="Groupe max">
+                <Field label={t('settings.fields.maxParty')}>
                   <Input value={String(settings.max_party_size || '')} onChange={v => handleChange('max_party_size', v)} type="number" />
                 </Field>
-                <Field label="Résa à l'avance (jours)">
+                <Field label={t('settings.fields.advanceDays')}>
                   <Input value={String(settings.advance_booking_days || '')} onChange={v => handleChange('advance_booking_days', v)} type="number" />
                 </Field>
               </div>
@@ -410,33 +417,33 @@ const Settings: React.FC = () => {
 
             {/* Services */}
             <div>
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">Services</p>
+              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-widest mb-3">{t('settings.fields.services')}</p>
               <div className="space-y-3">
-                {/* Déjeuner */}
+                {/* Lunch */}
                 <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-3">
                   <div className="flex items-center gap-3">
                     <Toggle on={services.lunch.active} onToggle={() => setServices({ ...services, lunch: { ...services.lunch, active: !services.lunch.active } })} />
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Déjeuner</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('settings.fields.lunch')}</p>
                   </div>
                   {services.lunch.active && (
                     <div className="grid grid-cols-3 gap-3">
-                      <Field label="De"><TimeInput value={services.lunch.from} onChange={v => setServices({ ...services, lunch: { ...services.lunch, from: v } })} /></Field>
-                      <Field label="À"><TimeInput value={services.lunch.to} onChange={v => setServices({ ...services, lunch: { ...services.lunch, to: v } })} /></Field>
-                      <Field label="Couverts max"><Input value={String(services.lunch.capacity)} onChange={v => setServices({ ...services, lunch: { ...services.lunch, capacity: parseInt(v) || 0 } })} type="number" /></Field>
+                      <Field label={t('settings.fields.from')}><TimeInput value={services.lunch.from} onChange={v => setServices({ ...services, lunch: { ...services.lunch, from: v } })} /></Field>
+                      <Field label={t('settings.fields.to')}><TimeInput value={services.lunch.to} onChange={v => setServices({ ...services, lunch: { ...services.lunch, to: v } })} /></Field>
+                      <Field label={t('settings.fields.maxCovers')}><Input value={String(services.lunch.capacity)} onChange={v => setServices({ ...services, lunch: { ...services.lunch, capacity: parseInt(v) || 0 } })} type="number" /></Field>
                     </div>
                   )}
                 </div>
-                {/* Dîner */}
+                {/* Dinner */}
                 <div className="p-4 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] space-y-3">
                   <div className="flex items-center gap-3">
                     <Toggle on={services.dinner.active} onToggle={() => setServices({ ...services, dinner: { ...services.dinner, active: !services.dinner.active } })} />
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Dîner</p>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('settings.fields.dinner')}</p>
                   </div>
                   {services.dinner.active && (
                     <div className="grid grid-cols-3 gap-3">
-                      <Field label="De"><TimeInput value={services.dinner.from} onChange={v => setServices({ ...services, dinner: { ...services.dinner, from: v } })} /></Field>
-                      <Field label="À"><TimeInput value={services.dinner.to} onChange={v => setServices({ ...services, dinner: { ...services.dinner, to: v } })} /></Field>
-                      <Field label="Couverts max"><Input value={String(services.dinner.capacity)} onChange={v => setServices({ ...services, dinner: { ...services.dinner, capacity: parseInt(v) || 0 } })} type="number" /></Field>
+                      <Field label={t('settings.fields.from')}><TimeInput value={services.dinner.from} onChange={v => setServices({ ...services, dinner: { ...services.dinner, from: v } })} /></Field>
+                      <Field label={t('settings.fields.to')}><TimeInput value={services.dinner.to} onChange={v => setServices({ ...services, dinner: { ...services.dinner, to: v } })} /></Field>
+                      <Field label={t('settings.fields.maxCovers')}><Input value={String(services.dinner.capacity)} onChange={v => setServices({ ...services, dinner: { ...services.dinner, capacity: parseInt(v) || 0 } })} type="number" /></Field>
                     </div>
                   )}
                 </div>
@@ -451,36 +458,36 @@ const Settings: React.FC = () => {
             services,
             max_party_size: settings.max_party_size ? parseInt(settings.max_party_size) : undefined,
             advance_booking_days: settings.advance_booking_days ? parseInt(settings.advance_booking_days) : undefined,
-          })} />
+          })} label={saveLabel} savingLabel={savingLabel} />
         </SectionCard>
 
         {/* 5. Notifications */}
-        <SectionCard title="Notifications" icon={Bell}>
+        <SectionCard title={t('settings.section.notifications')} icon={Bell}>
           <div className="space-y-4">
-            <Field label="Email de confirmation" helper="Les confirmations de réservation sont envoyées à cette adresse">
+            <Field label={t('settings.fields.confirmationEmail')} helper={t('settings.fields.confirmationEmailHelper')}>
               <Input value={confirmationEmail} onChange={v => setConfirmationEmail(v)} type="email" placeholder="reservations@monrestaurant.fr" />
             </Field>
-            <Field label="Politique d'annulation">
-              <Textarea value={settings.cancellation_policy || ''} onChange={v => handleChange('cancellation_policy', v)} placeholder="Ex : Annulation gratuite jusqu'à 24h avant..." />
+            <Field label={t('settings.fields.cancelPolicy')}>
+              <Textarea value={settings.cancellation_policy || ''} onChange={v => handleChange('cancellation_policy', v)} placeholder={t('settings.fields.phCancelPolicy')} />
             </Field>
-            <Field label="Fonctionnalités spéciales">
-              <Textarea value={settings.special_features || ''} onChange={v => handleChange('special_features', v)} placeholder="Ex : Terrasse, menu enfants, accès PMR..." />
+            <Field label={t('settings.fields.specialFeatures')}>
+              <Textarea value={settings.special_features || ''} onChange={v => handleChange('special_features', v)} placeholder={t('settings.fields.phSpecialFeatures')} />
             </Field>
           </div>
           <SaveButton loading={savingSection === 'notifications'} onClick={() => saveSection('notifications', {
             confirmation_email: confirmationEmail,
             cancellation_policy: settings.cancellation_policy,
             special_features: settings.special_features,
-          })} />
+          })} label={saveLabel} savingLabel={savingLabel} />
         </SectionCard>
 
         {/* 6. Informations système */}
-        <SectionCard title="Informations système" description="Gérées automatiquement par TableNow — lecture seule" icon={Info}>
+        <SectionCard title={t('settings.section.system')} description={t('settings.section.systemDesc')} icon={Info}>
           <div className="space-y-3">
-            <CopyField label="Adresse BCC"      value={user?.bcc_email         || 'Non configuré'} />
-            <CopyField label="Numéro IA (VAPI)" value={user?.vapi_phone_number  || 'Non configuré'} />
-            <CopyField label="URL du restaurant" value={user?.slug ? `tablenow.io/r/${user.slug}` : '—'} />
-            {user?.vapi_assistant_id && <CopyField label="Assistant ID" value={user.vapi_assistant_id} />}
+            <CopyField label={t('settings.fields.bccAddress')}    value={user?.bcc_email         || t('common.notConfigured')} />
+            <CopyField label={t('settings.fields.vapiNumber')}    value={user?.vapi_phone_number || t('common.notConfigured')} />
+            <CopyField label={t('settings.fields.restaurantUrl')} value={user?.slug ? `tablenow.io/r/${user.slug}` : '—'} />
+            {user?.vapi_assistant_id && <CopyField label={t('settings.fields.assistantId')} value={user.vapi_assistant_id} />}
           </div>
         </SectionCard>
 

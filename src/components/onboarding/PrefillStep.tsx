@@ -3,6 +3,7 @@
 // Step 1 of restaurant onboarding — auto-fill from Google Maps + website
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Loader2, Search, Globe, MapPin } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -25,6 +26,7 @@ interface PrefillStepProps {
 }
 
 export default function PrefillStep({ onComplete }: PrefillStepProps) {
+  const { t } = useTranslation();
   const [googleUrl, setGoogleUrl]   = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [loading, setLoading]       = useState(false);
@@ -32,7 +34,7 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
 
   async function handlePrefill() {
     if (!googleUrl && !websiteUrl) {
-      setError('Entrez au moins un lien Google Maps ou votre site web.');
+      setError(t('prefill.needLink'));
       return;
     }
     setError(null);
@@ -50,13 +52,13 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Erreur lors de la récupération des données');
+        throw new Error(err.error || t('prefill.fetchError'));
       }
 
       const data: PrefillResult = await res.json();
       onComplete(data);
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      setError(err.message || t('prefill.genericError'));
     } finally {
       setLoading(false);
     }
@@ -70,10 +72,8 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
             <Search size={32} />
           </div>
         </div>
-        <h2 className="text-2xl font-bold mb-2">Récupérer vos informations</h2>
-        <p className="text-gray-600 text-sm">
-          Gagnez du temps — on récupère les informations de votre établissement automatiquement.
-        </p>
+        <h2 className="text-2xl font-bold mb-2">{t('prefill.title')}</h2>
+        <p className="text-gray-600 text-sm">{t('prefill.subtitle')}</p>
       </div>
 
       <div className="space-y-4">
@@ -81,30 +81,28 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
         <div>
           <label className="block text-sm font-medium mb-2 flex items-center gap-1">
             <MapPin size={16} />
-            Lien Google Maps <span className="text-gray-400 text-xs">(recommandé)</span>
+            {t('prefill.googleLink')} <span className="text-gray-400 text-xs">{t('prefill.recommended')}</span>
           </label>
           <input
             type="url"
-            placeholder="https://maps.google.com/..."
+            placeholder={t('prefill.phGoogleMaps')}
             value={googleUrl}
             onChange={(e) => setGoogleUrl(e.target.value)}
             disabled={loading}
             className="input"
           />
-          <p className="text-xs text-gray-400 mt-1">
-            Ouvrez votre fiche Google Business → cliquez "Partager" → copiez le lien
-          </p>
+          <p className="text-xs text-gray-400 mt-1">{t('prefill.googleHelper')}</p>
         </div>
 
         {/* Website */}
         <div>
           <label className="block text-sm font-medium mb-2 flex items-center gap-1">
             <Globe size={16} />
-            Site web <span className="text-gray-400 text-xs">(optionnel)</span>
+            {t('prefill.website')} <span className="text-gray-400 text-xs">{t('prefill.optional')}</span>
           </label>
           <input
             type="url"
-            placeholder="https://votre-restaurant.fr"
+            placeholder={t('prefill.phWebsite')}
             value={websiteUrl}
             onChange={(e) => setWebsiteUrl(e.target.value)}
             disabled={loading}
@@ -126,12 +124,12 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
           {loading ? (
             <span className="flex items-center justify-center">
               <Loader2 size={16} className="animate-spin mr-2" />
-              Récupération en cours...
+              {t('prefill.fetching')}
             </span>
           ) : (
             <span className="flex items-center justify-center gap-2">
               <Search size={16} />
-              Récupérer mes informations
+              {t('prefill.fetch')}
             </span>
           )}
         </button>
@@ -141,7 +139,7 @@ export default function PrefillStep({ onComplete }: PrefillStepProps) {
           disabled={loading}
           className="w-full text-center text-sm text-gray-500 hover:text-black underline py-2"
         >
-          Remplir manuellement
+          {t('prefill.manual')}
         </button>
       </div>
     </div>
