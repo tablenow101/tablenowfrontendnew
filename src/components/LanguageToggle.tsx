@@ -41,9 +41,12 @@ const LanguageToggle: React.FC<Props> = ({ variant = 'chip', className = '' }) =
     const inactiveCls = variant === 'chip'
         ? 'text-gray-400 hover:text-white'
         : 'text-gray-600 hover:text-black';
+    // La bordure doit suivre le fond : transparente claire sur sombre,
+    // transparente sombre sur clair — sinon le conteneur est invisible.
+    const borderCls = variant === 'chip' ? 'border-white/10' : 'border-black/10';
 
     return (
-        <div className={`inline-flex items-center gap-1 rounded-full border border-white/10 p-0.5 ${className}`}
+        <div className={`inline-flex items-center gap-1 rounded-full border ${borderCls} p-0.5 ${className}`}
              role="group" aria-label="Language selector">
             <button
                 type="button"
