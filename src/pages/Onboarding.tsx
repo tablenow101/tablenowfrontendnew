@@ -129,7 +129,8 @@ const Onboarding: React.FC = () => {
     async function nextStep() {
         if (step === 0) await saveStep(info);
         if (step === 1) await saveStep({ opening_hours: hours, capacity: totalCapacity, services });
-        if (step === 2) await saveStep({ confirmation_email: confirmationEmail });
+        // Step 2: save email + mark onboarding complete
+        if (step === 2) await saveStep({ confirmation_email: confirmationEmail, setup_complete: true });
         setStep(s => Math.min(s + 1, 3));
     }
 
@@ -189,7 +190,8 @@ const Onboarding: React.FC = () => {
                                 </div>
                                 {i < STEPS.length - 1 && (
                                     <div style={{
-                                        flex: 1, height: '1px', marginTop: '20px', margin: '20px 8px 0',
+                                        flex: 1, height: '1px',
+                                        margin: '20px 8px 0',
                                         background: i < step ? 'var(--acc)' : 'var(--line2)',
                                     }} />
                                 )}
